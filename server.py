@@ -1,10 +1,12 @@
 import json
+import os
 import re
+import shutil
+import subprocess
 import time
 import uuid
-import subprocess
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 from fastapi import FastAPI, BackgroundTasks
 from fastapi.responses import HTMLResponse
@@ -14,16 +16,43 @@ from pydantic import BaseModel
 APP_DIR = Path(__file__).parent
 INDEX_HTML = APP_DIR / "index.html"
 
-OUTPUT_DIR = Path.home() / "Documents" / "SummarizedVideos"
-TEMP_DIR = Path("/tmp") / "summarizevideosapp"
-WHISPER_MODEL = Path.home() / "models" / "ggml-base.en.bin"
+OUTPUT_DIR = Path(os.environ.get("SVA_OUTPUT_DIR", Path.home() / "Documents" / "SummarizedVideos"))
+TEMP_DIR = Path(os.environ.get("SVA_TEMP_DIR", Path("/tmp") / "summarizevideosapp"))
+WHISPER_MODEL = Path(os.environ.get("WHISPER_MODEL_PATH", Path.home() / "models" / "ggml-base.en.bin"))
 
-YT_DLP = "/opt/homebrew/bin/yt-dlp"
-WHISPER_CLI = "/opt/homebrew/bin/whisper-cli"
-OLLAMA = "/usr/local/bin/ollama"
+
+def resolve_command(env_var: str, default: str) -> str:
+    """Resolve a binary location from an env var, PATH, or a default path.
+
+    This prevents hardcoding Homebrew-specific paths and surfaces clearer errors
+    when prerequisites are missing.
+    """
+
+    candidates = [os.environ.get(env_var), default]
+
+    for candidate in candidates:
+        if not candidate:
+            continue
+
+        candidate_path = Path(candidate)
+        if candidate_path.exists() and candidate_path.is_file():
+            return str(candidate_path)
+
+        resolved = shutil.which(candidate)
+        if resolved:
+            return resolved
+
+    raise RuntimeError(
+        f"Could not find required command. Set {env_var} or install '{default}'."
+    )
+
+
+YT_DLP = resolve_command("YT_DLP", "/opt/homebrew/bin/yt-dlp")
+WHISPER_CLI = resolve_command("WHISPER_CLI", "/opt/homebrew/bin/whisper-cli")
+OLLAMA = resolve_command("OLLAMA_BIN", "/usr/local/bin/ollama")
 
 # Pick one:
-OLLAMA_MODEL = "qwen3:8b"
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:8b")
 # OLLAMA_MODEL = "qwen2.5:14b"
 # ====================
 
@@ -160,14 +189,25 @@ def transcribe(job_id: str, mp3: Path) -> str:
 
 
 def chunk_text(text: str, max_chars: int = 9000) -> list[str]:
+    """Split text into chunks that prefer whitespace boundaries."""
+
     text = text.strip()
     if not text:
         return []
-    chunks = []
+
+    chunks: list[str] = []
     i = 0
+
     while i < len(text):
-        chunks.append(text[i:i + max_chars])
-        i += max_chars
+        end = min(i + max_chars, len(text))
+        if end < len(text):
+            boundary = text.rfind(" ", i, end)
+            if boundary != -1 and boundary > i + (max_chars * 0.6):
+                end = boundary
+
+        chunks.append(text[i:end].strip())
+        i = end
+
     return chunks
 
 
