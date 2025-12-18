@@ -27,6 +27,7 @@ OLLAMA_MODEL = "gemma3:12b"
 YT_DLP = "/opt/homebrew/bin/yt-dlp"
 WHISPER_CLI = "/opt/homebrew/bin/whisper-cli"
 OLLAMA = "/usr/local/bin/ollama"
+FFMPEG_LOCATION = "/opt/homebrew/bin"
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -238,6 +239,7 @@ def download_audio(job_id: str, url: str) -> tuple[Path, str]:
     audio_out = TEMP_DIR / f"{job_id}.%(ext)s"
     cmd = [
         YT_DLP,
+        "--ffmpeg-location", FFMPEG_LOCATION,
         "-f", "bestaudio/best",
         "--extract-audio",
         "--audio-format", "mp3",
