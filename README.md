@@ -10,6 +10,7 @@ SummarizeVideosApp downloads audio from a TikTok/YouTube URL, transcribes it wit
 - Simple web UI for submitting a video link and optional custom title.
 - Progress tracking across download, transcription, summarization, and file writing steps.
 - Markdown output includes URL, timestamp, summary, key points, and full transcript.
+- Toggle to include transcript only and no summmary or key points.
 - Clipboard-ready text block for quick sharing.
 
 ## Quick-start (macOS, Python 3.12)
@@ -82,6 +83,20 @@ Create a LaunchAgent plist at `~/Library/LaunchAgents/com.summarizevideosapp.pli
 </plist>
 ```
 
+You are definitely **not** on `fernando7ct`’s machine, so update these before loading:
+
+```bash
+# Point to your venv's Python (check with: source backend/.venv/bin/activate && which python3.12)
+/Users/fernando7ct/Projects/Personal/SummarizeVideosApp/backend/.venv/bin/python3.12
+
+# Point to your clone directory
+/Users/fernando7ct/Projects/Personal/SummarizeVideosApp
+
+# Change port if 8000 is in use
+--port
+8000
+```
+
 Load plist file and start server:
 
 ```bash
@@ -109,6 +124,13 @@ OLLAMA = "/usr/local/bin/ollama"
 - Edit the variables above directly if you change output/temp directories, Whisper model path, Ollama model name, or the `yt-dlp`/`whisper-cli`/`ollama` binary paths.
 - Keep the `Path(...)` wrappers so directories are created automatically.
 - On Intel macOS, Homebrew binaries may live in `/usr/local/bin`; update the strings if needed.
+- If your Whisper/Ollama models live elsewhere, update the absolute paths so the backend can find them.
+- If you prefer environment variables, point the plist to a small shell script that exports them before launching `uvicorn`.
+
+### Verifying your binaries
+- `which python3.12`, `which uvicorn`, `which yt-dlp`, `which whisper-cli`, and `which ollama` should match what is in `backend/app/config.py` and the plist.
+- If you use a different Python version/venv, update both the plist `ProgramArguments` and the `pip install` step to match.
+- When changing the port or host, update both the plist and wherever you visit the UI (e.g., `http://localhost:9000`).
 
 ## Notes and tips
 - The UI displays the saved file path and also provides a text area for quick copying.
