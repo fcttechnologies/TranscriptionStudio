@@ -90,6 +90,8 @@ class JobRequest(BaseModel):
 
 @dataclass(slots=True)
 class JobOptions:
+    """Preprocessed job settings derived from user requests."""
+
     url: str
     custom_title: str | None
     transcript_only: bool
@@ -97,6 +99,15 @@ class JobOptions:
 
 
 def run(cmd: list[str]) -> str:
+    """Run a command, raising on failure and returning stdout.
+
+    Args:
+        cmd: Full command with arguments.
+
+    Returns:
+        Captured stdout text.
+    """
+
     p = subprocess.run(cmd, capture_output=True, text=True)
     if p.returncode != 0:
         raise RuntimeError(p.stderr.strip() or "Command failed")
@@ -104,6 +115,15 @@ def run(cmd: list[str]) -> str:
 
 
 def resolve_model_choice(model_key: str | None) -> tuple[str, str]:
+    """Return the configured model name and key, defaulting when needed.
+
+    Args:
+        model_key: Optional key from the client ("fast"/"pro").
+
+    Returns:
+        Tuple of (model name, normalized key).
+    """
+
     key = (model_key or DEFAULT_MODEL_KEY).lower()
     if key not in MODEL_PRESETS:
         key = DEFAULT_MODEL_KEY
@@ -115,6 +135,16 @@ def resolve_model_choice(model_key: str | None) -> tuple[str, str]:
 
 
 def build_job_options(req: JobRequest, *, force_transcript_only: bool | None = None) -> JobOptions:
+    """Normalize incoming payloads into a JobOptions record.
+
+    Args:
+        req: User payload from the UI/Shortcut.
+        force_transcript_only: Optional override for the transcript-only flag.
+
+    Returns:
+        A `JobOptions` instance used throughout the pipeline.
+    """
+
     transcript_only = req.transcript_only if force_transcript_only is None else force_transcript_only
     _, key = resolve_model_choice(req.model)
     return JobOptions(
@@ -126,6 +156,17 @@ def build_job_options(req: JobRequest, *, force_transcript_only: bool | None = N
 
 
 def create_job_record(job_id: str, *, transcript_only: bool, model_key: str) -> dict:
+    """Create the initial job dictionary persisted in memory.
+
+    Args:
+        job_id: Unique identifier for this run.
+        transcript_only: Whether to skip summarization.
+        model_key: Resolved model tier key (e.g., "fast").
+
+    Returns:
+        A dictionary stored in the in-memory job registry.
+    """
+
     steps_for_job = TRANSCRIPT_ONLY_STEPS if transcript_only else STEPS
     return {
         "job_id": job_id,
@@ -144,15 +185,21 @@ def create_job_record(job_id: str, *, transcript_only: bool, model_key: str) -> 
 
 
 def set_job(job_id: str, **updates):
+    """Update a job entry in place with new state or metadata."""
+
     jobs[job_id].update(updates)
 
 
 def set_step(job_id: str, idx: int, text: str, progress: int):
+    """Advance a job to a new UI step with progress metadata."""
+
     step_list = jobs.get(job_id, {}).get("steps", STEPS)
     set_job(job_id, active_step_index=idx, stage_text=text, progress=progress, steps=step_list)
 
 
 def sanitize_filename(name: str) -> str:
+    """Clean user-provided titles for safe filesystem usage."""
+
     # allow spaces; remove filesystem-hostile chars
     name = re.sub(r"[^\w\s\-\.\(\)&]", "", name).strip()
     name = re.sub(r"\s+", " ", name)
@@ -160,6 +207,8 @@ def sanitize_filename(name: str) -> str:
 
 
 def dedupe_path(base_path: Path) -> Path:
+    """Return a unique path by appending a counter when needed."""
+
     if not base_path.exists():
         return base_path
     stem = base_path.stem
@@ -197,11 +246,23 @@ def clean_title(t: str) -> str:
 
 
 def extract_video_title(url: str) -> str:
+    """Fetch the video title without downloading media."""
+
     title = run([YT_DLP, "--print", "%(title)s", "--no-download", url]).strip()
     return title or ""
 
 
 def download_audio(job_id: str, url: str) -> tuple[Path, str]:
+    """Download an MP3 for the given job and return its path and source title.
+
+    Args:
+        job_id: Identifier used to update progress.
+        url: Video URL supplied by the user.
+
+    Returns:
+        Tuple of (path to MP3 file, video title from YouTube).
+    """
+
     set_step(job_id, 0, "Downloading audio…", 18)
 
     audio_out = TEMP_DIR / f"{job_id}.%(ext)s"
@@ -229,6 +290,16 @@ def download_audio(job_id: str, url: str) -> tuple[Path, str]:
 
 
 def transcribe(job_id: str, mp3: Path) -> str:
+    """Run whisper-cli to produce a transcript for the downloaded audio.
+
+    Args:
+        job_id: Identifier used to update progress.
+        mp3: Local path to the audio file.
+
+    Returns:
+        Transcript text.
+    """
+
     if not WHISPER_MODEL.exists():
         raise RuntimeError(f"Whisper model missing at {WHISPER_MODEL}")
 
@@ -298,6 +369,19 @@ def extract_json_object(raw: str) -> dict:
 
 
 def summarize(job_id: str, title_hint: str, url: str, transcript: str, model_name: str) -> dict:
+    """Summarize a transcript via Ollama, handling long inputs with chunking.
+
+    Args:
+        job_id: Identifier used to update progress.
+        title_hint: Title from YouTube, used to guide the model.
+        url: Source URL to include in prompts.
+        transcript: Full transcript text to summarize.
+        model_name: Concrete Ollama model to run.
+
+    Returns:
+        JSON-friendly dict with title, summary, and key_points fields.
+    """
+
     set_step(job_id, 2, "Summarizing…", 78)
 
     transcript = (transcript or "").strip()
@@ -433,6 +517,20 @@ def write_md(
     s: dict,
     transcript: str,
 ) -> tuple[Path, str, str]:
+    """Write the full summary markdown file and return metadata for UI/clipboard.
+
+    Args:
+        job_id: Identifier used to update progress.
+        url: Source URL of the content.
+        custom_title: Optional user-provided title override.
+        yt_title: Title fetched from YouTube.
+        s: Summary payload from the LLM.
+        transcript: Full transcript text.
+
+    Returns:
+        Tuple of (markdown path, chosen title, saved timestamp string).
+    """
+
     set_step(job_id, 3, "Writing markdown file…", 92)
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -480,6 +578,19 @@ def write_md_transcript_only(
     yt_title: str,
     transcript: str,
 ) -> tuple[Path, str, str]:
+    """Write a transcript-only markdown file and return metadata for UI/clipboard.
+
+    Args:
+        job_id: Identifier used to update progress.
+        url: Source URL of the content.
+        custom_title: Optional user-provided title override.
+        yt_title: Title fetched from YouTube.
+        transcript: Full transcript text.
+
+    Returns:
+        Tuple of (markdown path, chosen title, saved timestamp string).
+    """
+
     set_step(job_id, 2, "Writing markdown file…", 90)
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -516,6 +627,21 @@ def build_clipboard_payload(
     transcript: str,
     transcript_only: bool,
 ) -> str:
+    """Format clipboard text for the UI and iOS Shortcut responses.
+
+    Args:
+        title: Final cleaned title written to disk.
+        url: Source URL of the content.
+        saved_at: Timestamp string shown in the UI.
+        summary: Summarized description text.
+        key_points: Bullet list from the model.
+        transcript: Full transcript text.
+        transcript_only: Whether to omit summary/key points.
+
+    Returns:
+        Clipboard-friendly block of text.
+    """
+
     if transcript_only:
         return transcript.strip()
 
@@ -538,6 +664,8 @@ def build_clipboard_payload(
 
 
 def cleanup(job_id: str):
+    """Remove temp files for a job and finalize progress bar state."""
+
     steps_for_job = jobs.get(job_id, {}).get("steps", STEPS)
     final_idx = max(len(steps_for_job) - 1, 0)
     set_step(job_id, final_idx, "Cleaning up…", 100)
@@ -549,6 +677,12 @@ def cleanup(job_id: str):
 
 
 def process_job(job_id: str, options: JobOptions):
+    """Full pipeline for a job: download -> transcribe -> summarize -> save.
+
+    This is executed in a FastAPI background task so the HTTP response
+    returns immediately while work continues.
+    """
+
     try:
         mp3, yt_title = download_audio(job_id, options.url)
         transcript = transcribe(job_id, mp3)
@@ -600,6 +734,8 @@ def process_job(job_id: str, options: JobOptions):
 
 @app.get("/", response_class=HTMLResponse)
 def home():
+    """Serve the single-page UI. Accessed by browsers at `/`."""
+
     if not INDEX_HTML.exists():
         return HTMLResponse("Missing index.html", status_code=500)
     return HTMLResponse(INDEX_HTML.read_text(encoding="utf-8"))
@@ -607,6 +743,14 @@ def home():
 
 @app.post("/api/jobs")
 def create_job(req: JobRequest, background: BackgroundTasks):
+    """Web UI entrypoint to start a summarize/transcript job.
+
+    Called by: the browser UI fetches POST `/api/jobs`.
+
+    Returns:
+        Dict containing `job_id` for polling and the transcript_only flag.
+    """
+
     job_id = str(uuid.uuid4())
     options = build_job_options(req)
     jobs[job_id] = create_job_record(
@@ -618,10 +762,26 @@ def create_job(req: JobRequest, background: BackgroundTasks):
 
 @app.get("/api/jobs/{job_id}")
 def get_job(job_id: str):
+    """Web UI polling endpoint returning current job status.
+
+    Called by: the browser UI via GET `/api/jobs/{job_id}`.
+
+    Returns:
+        Job dictionary or an error placeholder if the job is missing.
+    """
+
     return jobs.get(job_id, {"state": "error", "error": "Job not found"})
 
 @app.post("/api/shortcut/start")
 def shortcut_start(req: JobRequest, background: BackgroundTasks):
+    """iOS Shortcut-only entrypoint; always runs in transcript-only mode.
+
+    Called by: Apple Shortcut via POST `/api/shortcut/start`.
+
+    Returns:
+        Dict with job_id, confirmation message, and transcript_only flag.
+    """
+
     job_id = str(uuid.uuid4())
     options = build_job_options(req, force_transcript_only=True)
 
@@ -635,6 +795,14 @@ def shortcut_start(req: JobRequest, background: BackgroundTasks):
 
 @app.get("/api/shortcut/status/{job_id}")
 def shortcut_status(job_id: str):
+    """iOS Shortcut polling endpoint returning clipboard payloads.
+
+    Called by: Apple Shortcut via GET `/api/shortcut/status/{job_id}`.
+
+    Returns:
+        Running state, error details, or clipboard_payload when done.
+    """
+
     job = jobs.get(job_id)
 
     if not job:
