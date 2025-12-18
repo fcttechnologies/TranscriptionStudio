@@ -65,9 +65,9 @@ Create a LaunchAgent plist at `~/Library/LaunchAgents/com.summarizevideosapp.pli
     <array>
       <string>/bin/zsh</string>
       <string>-lc</string>
-      <string>cd /path/to/SummarizeVideosApp && source .venv/bin/activate && uvicorn server:app --host 0.0.0.0 --port 8000</string>
+      <string>cd /Users/fernando7ct/Projects/Personal/SummarizeVideosApp &amp;&amp; source .venv/bin/activate &amp;&amp; uvicorn server:app --host 0.0.0.0 --port 8000</string>
     </array>
-    <key>WorkingDirectory</key><string>/path/to/SummarizeVideosApp</string>
+    <key>WorkingDirectory</key><string>/Users/fernando7ct/Projects/Personal/SummarizeVideosApp</string>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
     <key>EnvironmentVariables</key>
