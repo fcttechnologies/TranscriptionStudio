@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Summarize Videos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <link rel="stylesheet" href="/static/styles.css"/>
+</head>
+<body>
+<main class="wrap">
+  <h1>Summarize Video</h1>
+  <p class="hint">Paste a TikTok or YouTube link.</p>
+
+  <section id="formBox" class="card">
+    <label class="label">Video URL</label>
+    <input id="url" placeholder="https://…" autocomplete="off"/>
+
+    <label class="label">Optional title (filename)</label>
+    <input id="customTitle" placeholder="Leave blank to auto-title" autocomplete="off"/>
+
+    <div class="optionsRow">
+      <label class="toggleLabel"><input id="transcriptOnly" type="checkbox"/> Transcript only</label>
+    </div>
+
+    <button id="go">Summarize</button>
+  </section>
+
+  <section id="progressBox" class="card hidden">
+    <div class="row">
+      <div id="statusText">Queued…</div>
+      <div id="statusIcon"></div>
+    </div>
+
+    <div class="bar"><div id="barFill"></div></div>
+    <ol id="steps" class="steps"></ol>
+
+    <div id="resultBox" class="hidden">
+      <div id="resultHeadline" class="resultHeadline"></div>
+      <div id="filePath" class="filePath"></div>
+      <div id="optionMeta" class="filePath"></div>
+
+      <h2>Paste-ready content</h2>
+      <textarea id="pastePack" readonly></textarea>
+
+      <div class="btnRow">
+        <button id="copy">Copy</button>
+        <button id="again">Summarize another</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

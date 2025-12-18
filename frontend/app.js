@@ -1,84 +1,3 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Summarize Videos</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <style>
-    :root { --border:#e6e6e6; --bg:#fafafa; --text:#111; }
-    body { font-family:-apple-system,system-ui,sans-serif; padding:24px; color:var(--text); background:white; }
-    .wrap { max-width:860px; margin:0 auto; }
-    h1 { margin-bottom:6px; }
-    .hint { margin-top:0; opacity:.75; }
-    .card { border:1px solid var(--border); border-radius:14px; padding:16px; background:var(--bg); }
-    .hidden { display:none; }
-    .label { display:block; font-size:13px; opacity:.8; margin-top:12px; margin-bottom:6px; }
-    input { width:100%; padding:12px; font-size:16px; border:1px solid var(--border); border-radius:10px; background:white; }
-    button { margin-top:14px; padding:12px 16px; font-size:16px; border-radius:10px; border:1px solid var(--border); background:white; cursor:pointer; }
-    button:hover { background:#f2f2f2; }
-    .row { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
-    #statusIcon { font-size:18px; }
-    .bar { height:10px; background:#e9e9e9; border-radius:999px; overflow:hidden; margin-bottom:12px; }
-    #barFill { height:10px; width:0%; background:#111; transition:width .25s ease; }
-    .steps { margin:0; padding-left:20px; opacity:.9; }
-    .steps li { margin:6px 0; }
-    .steps li.done { opacity:.65; text-decoration:line-through; }
-    .steps li.active { font-weight:600; }
-    .resultHeadline { margin-top:14px; font-weight:700; }
-    .filePath { margin-top:6px; opacity:.8; }
-    textarea { width:100%; height:260px; margin-top:10px; padding:12px; border-radius:10px; border:1px solid var(--border);
-              font-family:ui-monospace,SFMono-Regular,Menlo,monospace; background:white; }
-    .btnRow { display:flex; gap:12px; margin-top:10px; flex-wrap:wrap; }
-    code { background:#efefef; padding:2px 6px; border-radius:6px; }
-    .optionsRow { display:flex; justify-content:flex-start; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
-    .toggleLabel { font-weight:600; display:flex; gap:8px; align-items:center; }
-  </style>
-</head>
-<body>
-<main class="wrap">
-  <h1>Summarize Video</h1>
-  <p class="hint">Paste a TikTok or YouTube link.</p>
-
-  <section id="formBox" class="card">
-    <label class="label">Video URL</label>
-    <input id="url" placeholder="https://…" autocomplete="off"/>
-
-    <label class="label">Optional title (filename)</label>
-    <input id="customTitle" placeholder="Leave blank to auto-title" autocomplete="off"/>
-
-    <div class="optionsRow">
-      <label class="toggleLabel"><input id="transcriptOnly" type="checkbox"/> Transcript only</label>
-    </div>
-
-    <button id="go">Summarize</button>
-  </section>
-
-  <section id="progressBox" class="card hidden">
-    <div class="row">
-      <div id="statusText">Queued…</div>
-      <div id="statusIcon"></div>
-    </div>
-
-    <div class="bar"><div id="barFill"></div></div>
-    <ol id="steps" class="steps"></ol>
-
-    <div id="resultBox" class="hidden">
-      <div id="resultHeadline" class="resultHeadline"></div>
-      <div id="filePath" class="filePath"></div>
-      <div id="optionMeta" class="filePath"></div>
-
-      <h2>Paste-ready content</h2>
-      <textarea id="pastePack" readonly></textarea>
-
-      <div class="btnRow">
-        <button id="copy">Copy</button>
-        <button id="again">Summarize another</button>
-      </div>
-    </div>
-  </section>
-</main>
-
-<script>
 let jobId = null;
 
 const formBox = document.getElementById("formBox");
@@ -127,11 +46,10 @@ async function pollJob(id){
     const steps = data.steps || [];
     const active = data.active_step_index ?? 0;
 
-    // If done, force all steps to render as completed
     if (data.state === "done") {
-      renderSteps(steps, steps.length); // ✅ everything crossed off
+      renderSteps(steps, steps.length);
     } else if (data.state === "error") {
-      renderSteps(steps, active); // keep whatever was active
+      renderSteps(steps, active);
     } else {
       renderSteps(steps, active);
     }
@@ -208,35 +126,29 @@ copyBtn.addEventListener("click", async () => {
   const text = pastePack.value || "";
   if (!text) return;
 
-  // Attempt modern clipboard API (works on https / localhost, often blocked on http LAN)
   try {
     await navigator.clipboard.writeText(text);
     copyBtn.textContent = "Copied!";
     setTimeout(() => (copyBtn.textContent = "Copy"), 900);
     return;
   } catch (_) {
-    // ignore and fallback
   }
 
-  // Fallback: iOS Safari-friendly selection
   try {
     pastePack.removeAttribute("readonly");
-    pastePack.setAttribute("contenteditable", "true"); // helps iOS
+    pastePack.setAttribute("contenteditable", "true");
     pastePack.focus();
-    pastePack.value = text; // ensure it's there
+    pastePack.value = text;
     pastePack.setSelectionRange(0, text.length);
 
     const ok = document.execCommand("copy");
     copyBtn.textContent = ok ? "Copied!" : "Tap & Hold to Copy";
 
-    // If execCommand fails, at least leave text selected so user can copy manually
     if (!ok) {
-      // keep selected; user can tap & hold > Copy
     }
   } catch (e) {
     copyBtn.textContent = "Tap & Hold to Copy";
   } finally {
-    // restore
     setTimeout(() => {
       pastePack.setAttribute("readonly", "readonly");
       pastePack.removeAttribute("contenteditable");
@@ -251,6 +163,3 @@ againBtn.addEventListener("click", () => {
   transcriptOnlyEl.checked = false;
   resetUI();
 });
-</script>
-</body>
-</html>

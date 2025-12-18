@@ -1,0 +1,93 @@
+import logging
+import uuid
+from contextlib import asynccontextmanager
+
+from fastapi import BackgroundTasks, FastAPI
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+from .config import FRONTEND_DIR, INDEX_HTML
+from .jobs import (
+    build_job_options,
+    cleanup_old_jobs,
+    create_job_record,
+    jobs,
+)
+from .pipeline import cleanup, cleanup_startup_temp, process_job
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+class JobRequest(BaseModel):
+    url: str
+    custom_title: str | None = None
+    transcript_only: bool = False
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    cleanup_startup_temp()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
+
+@app.get("/", response_class=HTMLResponse)
+def home():
+    if not INDEX_HTML.exists():
+        return HTMLResponse("Missing index.html", status_code=500)
+    return FileResponse(INDEX_HTML)
+
+
+@app.post("/api/jobs")
+def create_job(req: JobRequest, background: BackgroundTasks):
+    job_id = str(uuid.uuid4())
+    cleanup_old_jobs(cleanup)
+    options = build_job_options(
+        url=req.url,
+        custom_title=req.custom_title,
+        transcript_only=req.transcript_only,
+    )
+    jobs[job_id] = create_job_record(job_id, transcript_only=options.transcript_only)
+    background.add_task(process_job, job_id, options)
+    return {"job_id": job_id, "transcript_only": options.transcript_only}
+
+
+@app.get("/api/jobs/{job_id}")
+def get_job(job_id: str):
+    return jobs.get(job_id, {"state": "error", "error": "Job not found"})
+
+
+@app.post("/api/shortcut/start")
+def shortcut_start(req: JobRequest, background: BackgroundTasks):
+    job_id = str(uuid.uuid4())
+    cleanup_old_jobs(cleanup)
+    options = build_job_options(url=req.url, custom_title=req.custom_title, transcript_only=True)
+
+    jobs[job_id] = create_job_record(job_id, transcript_only=options.transcript_only)
+    background.add_task(process_job, job_id, options)
+
+    return {"job_id": job_id, "message": "Job started", "transcript_only": options.transcript_only}
+
+
+@app.get("/api/shortcut/status/{job_id}")
+def shortcut_status(job_id: str):
+    job = jobs.get(job_id)
+
+    if not job:
+        return {"state": "error", "message": "Job not found"}
+
+    if job["state"] == "done":
+        return {"state": "done", "clipboard_payload": job.get("clipboard_payload")}
+
+    if job["state"] == "error":
+        return {"state": "error", "message": job.get("error")}
+
+    return {"state": "running"}
