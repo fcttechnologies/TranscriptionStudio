@@ -67,6 +67,13 @@ STEPS = [
     "Cleaning up temp files",
 ]
 
+TRANSCRIPT_ONLY_STEPS = [
+    "Downloading audio",
+    "Transcribing",
+    "Writing markdown file",
+    "Cleaning up temp files",
+]
+
 jobs: dict[str, dict] = {}
 
 app = FastAPI()
@@ -89,7 +96,8 @@ def set_job(job_id: str, **updates):
 
 
 def set_step(job_id: str, idx: int, text: str, progress: int):
-    set_job(job_id, active_step_index=idx, stage_text=text, progress=progress, steps=STEPS)
+    step_list = jobs.get(job_id, {}).get("steps", STEPS)
+    set_job(job_id, active_step_index=idx, stage_text=text, progress=progress, steps=step_list)
 
 
 def sanitize_filename(name: str) -> str:
@@ -406,8 +414,43 @@ def write_md(job_id: str, url: str, custom_title: str | None, yt_title: str, s: 
     return out_path, chosen_title
 
 
+def write_md_transcript_only(
+    job_id: str,
+    url: str,
+    custom_title: str | None,
+    yt_title: str,
+    transcript: str,
+) -> tuple[Path, str, str]:
+    set_step(job_id, 2, "Writing markdown file…", 90)
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    chosen_title = (
+        (custom_title or "").strip()
+        or clean_title(yt_title)
+        or "Untitled"
+    )
+    chosen_title = clean_title(chosen_title) or "Untitled"
+
+    safe = sanitize_filename(chosen_title)
+    out_path = dedupe_path(OUTPUT_DIR / f"{safe}.md")
+
+    md = []
+    md.append(f"# {chosen_title}\n")
+    md.append(f"- **URL:** {url}")
+    md.append(f"- **Saved:** {now}\n")
+
+    md.append("## Transcript")
+    md.append(transcript.strip() or "—")
+
+    out_path.write_text("\n".join(md), encoding="utf-8")
+    return out_path, chosen_title, now
+
+
 def cleanup(job_id: str):
-    set_step(job_id, 4, "Cleaning up…", 100)
+    steps_for_job = jobs.get(job_id, {}).get("steps", STEPS)
+    final_idx = max(len(steps_for_job) - 1, 0)
+    set_step(job_id, final_idx, "Cleaning up…", 100)
     for p in TEMP_DIR.glob(f"{job_id}*"):
         try:
             p.unlink()
@@ -447,6 +490,31 @@ def process_job(job_id: str, url: str, custom_title: str | None):
             file_name=out_path.name,
             paste_pack=paste_pack,
             active_step_index=len(STEPS),
+        )
+    except Exception as e:
+        set_job(job_id, state="error", stage_text="Failed", error=str(e), progress=100)
+
+
+def process_job_transcript_only(job_id: str, url: str, custom_title: str | None):
+    try:
+        mp3, yt_title = download_audio(job_id, url)
+        transcript = transcribe(job_id, mp3)
+        out_path, final_title, saved_ts = write_md_transcript_only(
+            job_id, url, custom_title, yt_title, transcript
+        )
+        cleanup(job_id)
+
+        paste_pack = transcript.strip()
+
+        set_job(
+            job_id,
+            state="done",
+            stage_text="Done",
+            progress=100,
+            file_path=str(out_path),
+            file_name=out_path.name,
+            paste_pack=paste_pack,
+            active_step_index=len(jobs[job_id].get("steps", TRANSCRIPT_ONLY_STEPS)),
         )
     except Exception as e:
         set_job(job_id, state="error", stage_text="Failed", error=str(e), progress=100)
@@ -496,9 +564,10 @@ def shortcut_start(req: JobRequest, background: BackgroundTasks):
         "paste_pack": None,
         "active_step_index": 0,
         "created_at": time.time(),
+        "steps": TRANSCRIPT_ONLY_STEPS,
     }
 
-    background.add_task(process_job, job_id, req.url, req.custom_title)
+    background.add_task(process_job_transcript_only, job_id, req.url, req.custom_title)
 
     return {
         "job_id": job_id,
@@ -515,7 +584,6 @@ def shortcut_status(job_id: str):
     if job["state"] == "done":
         return {
             "state": "done",
-            "file_name": job.get("file_name"),
             "paste_pack": job.get("paste_pack"),
         }
 
@@ -525,8 +593,4 @@ def shortcut_status(job_id: str):
             "message": job.get("error")
         }
 
-    return {
-        "state": "running",
-        "stage": job.get("stage_text", "Working"),
-        "progress": job.get("progress", 0)
-    }
+    return {"state": "running"}
