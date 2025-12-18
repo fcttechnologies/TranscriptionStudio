@@ -53,14 +53,14 @@ Open `http://localhost:8000` and paste a video URL to summarize.
 
 ## Launching with `launchctl` (keeps the app running after login)
 
-Create a LaunchAgent plist at `~/Library/LaunchAgents/com.summarizevideosapp.server.plist`:
+Create a LaunchAgent plist at `~/Library/LaunchAgents/com.summarizevideosapp.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
   <dict>
-    <key>Label</key><string>com.summarizevideosapp.server</string>
+    <key>Label</key><string>com.summarizevideosapp</string>
     <key>ProgramArguments</key>
     <array>
       <string>/bin/zsh</string>
@@ -70,8 +70,6 @@ Create a LaunchAgent plist at `~/Library/LaunchAgents/com.summarizevideosapp.ser
     <key>WorkingDirectory</key><string>/path/to/SummarizeVideosApp</string>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
-    <key>StandardOutPath</key><string>/tmp/summarizevideosapp.out.log</string>
-    <key>StandardErrorPath</key><string>/tmp/summarizevideosapp.err.log</string>
     <key>EnvironmentVariables</key>
     <dict>
       <key>SVA_OUTPUT_DIR</key><string>${HOME}/Documents/SummarizedVideos</string>
@@ -84,14 +82,12 @@ Create a LaunchAgent plist at `~/Library/LaunchAgents/com.summarizevideosapp.ser
 </plist>
 ```
 
-Load and start it:
+Load plist file and start server:
 
 ```bash
-launchctl load ~/Library/LaunchAgents/com.summarizevideosapp.server.plist
-launchctl start com.summarizevideosapp.server
+launchctl load ~/Library/LaunchAgents/com.summarizevideosapp.plist
+launchctl start com.summarizevideosapp
 ```
-
-Logs will accumulate in `/tmp/summarizevideosapp.*.log` as configured above.
 
 ## Configuration reference
 

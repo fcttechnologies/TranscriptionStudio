@@ -1,4 +1,6 @@
 import json
+import logging
+from contextlib import asynccontextmanager
 import os
 import re
 import shutil
@@ -78,7 +80,29 @@ TRANSCRIPT_ONLY_STEPS = [
 
 jobs: dict[str, dict] = {}
 
-app = FastAPI()
+
+
+
+def cleanup_startup_temp():
+    """Clear the temp directory on startup to remove orphaned files from previous runs."""
+    if TEMP_DIR.exists():
+        for item in TEMP_DIR.iterdir():
+            try:
+                if item.is_file() or item.is_symlink():
+                    item.unlink()
+                elif item.is_dir():
+                    shutil.rmtree(item)
+            except Exception as e:
+                print(f"Failed to delete {item}: {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    cleanup_startup_temp()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 class JobRequest(BaseModel):
@@ -187,14 +211,36 @@ def create_job_record(job_id: str, *, transcript_only: bool, model_key: str) -> 
 def set_job(job_id: str, **updates):
     """Update a job entry in place with new state or metadata."""
 
+    if job_id not in jobs:
+        return
     jobs[job_id].update(updates)
 
 
 def set_step(job_id: str, idx: int, text: str, progress: int):
     """Advance a job to a new UI step with progress metadata."""
 
+    if job_id not in jobs:
+        return
     step_list = jobs.get(job_id, {}).get("steps", STEPS)
     set_job(job_id, active_step_index=idx, stage_text=text, progress=progress, steps=step_list)
+
+
+def cleanup_old_jobs(retention_seconds: int = 86400):
+    """Remove jobs older than the retention period (default 24h)."""
+    
+    now = time.time()
+    # List keys to avoid runtime error while modifying the dict
+    for jid in list(jobs.keys()):
+        job = jobs[jid]
+        created_at = job.get("created_at", 0)
+        state = job.get("state", "running")
+
+        # Only prune terminal states to prevent race conditions with running jobs
+        if (now - created_at > retention_seconds) and (state in ["done", "error"]):
+            # Attempt to clean up temp files if they still exist
+            cleanup(jid)
+            # Remove from memory
+            del jobs[jid]
 
 
 def sanitize_filename(name: str) -> str:
@@ -752,6 +798,7 @@ def create_job(req: JobRequest, background: BackgroundTasks):
     """
 
     job_id = str(uuid.uuid4())
+    cleanup_old_jobs()  # Maintenance before adding new
     options = build_job_options(req)
     jobs[job_id] = create_job_record(
         job_id, transcript_only=options.transcript_only, model_key=options.model_key
@@ -783,6 +830,7 @@ def shortcut_start(req: JobRequest, background: BackgroundTasks):
     """
 
     job_id = str(uuid.uuid4())
+    cleanup_old_jobs()  # Maintenance before adding new
     options = build_job_options(req, force_transcript_only=True)
 
     jobs[job_id] = create_job_record(
