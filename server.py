@@ -94,7 +94,7 @@ def set_step(job_id: str, idx: int, text: str, progress: int):
 
 def sanitize_filename(name: str) -> str:
     # allow spaces; remove filesystem-hostile chars
-    name = re.sub(r"[^\w\s\-\.\(\)]", "", name).strip()
+    name = re.sub(r"[^\w\s\-\.\(\)&]", "", name).strip()
     name = re.sub(r"\s+", " ", name)
     return name[:140] if name else "Untitled"
 
@@ -515,7 +515,6 @@ def shortcut_status(job_id: str):
     if job["state"] == "done":
         return {
             "state": "done",
-            "file_path": job.get("file_path"),
             "file_name": job.get("file_name"),
             "paste_pack": job.get("paste_pack"),
         }
