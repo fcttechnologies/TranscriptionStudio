@@ -517,6 +517,7 @@ def shortcut_status(job_id: str):
             "state": "done",
             "file_path": job.get("file_path"),
             "file_name": job.get("file_name"),
+            "paste_pack": job.get("paste_pack"),
         }
 
     if job["state"] == "error":
