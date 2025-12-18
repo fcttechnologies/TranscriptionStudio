@@ -2,6 +2,11 @@
 
 SummarizeVideosApp downloads audio from a TikTok/YouTube URL, transcribes it with Whisper, summarizes it with an Ollama model, and saves a markdown file with the results.
 
+## Project layout
+- `frontend/`: static HTML/CSS/JS for the single-page UI.
+- `backend/`: FastAPI app code (`backend/app`) and Python dependencies (`backend/requirements.txt`).
+- Output and temp folders remain under your home directory and `/tmp` as before.
+
 ## Feature highlights
 - Simple web UI for submitting a video link and optional custom title.
 - Progress tracking across download, transcription, summarization, and file writing steps.
@@ -37,17 +42,17 @@ ollama rm gemma3:12b
 4) **Create a Python 3.12 virtual environment and install deps**
 
 ```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
+python3.12 -m venv backend/.venv
+source backend/.venv/bin/activate
 pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
 5) **Run the server from Terminal**
 
 ```bash
-source .venv/bin/activate
-uvicorn server:app --reload --host 0.0.0.0 --port 8000
+source backend/.venv/bin/activate
+uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 Open `http://localhost:8000` and paste a video URL to summarize.
@@ -64,10 +69,10 @@ Create a LaunchAgent plist at `~/Library/LaunchAgents/com.summarizevideosapp.pli
     <key>Label</key><string>com.summarizevideosapp</string>
     <key>ProgramArguments</key>
     <array>
-      <string>/Users/fernando7ct/Projects/Personal/SummarizeVideosApp/.venv/bin/python3</string>
+      <string>/Users/fernando7ct/Projects/Personal/SummarizeVideosApp/backend/.venv/bin/python3.12</string>
       <string>-m</string>
       <string>uvicorn</string>
-      <string>server:app</string>
+      <string>backend.app.main:app</string>
       <string>--host</string><string>0.0.0.0</string>
       <string>--port</string><string>8000</string>
     </array>
@@ -87,10 +92,10 @@ launchctl start com.summarizevideosapp
 
 ## Configuration reference
 
-Key paths are hardcoded near the top of `server.py`. Change these variables if you want different locations or binaries:
+Key paths are hardcoded near the top of `backend/app/config.py`. Change these variables if you want different locations or binaries:
 
 ```python
-# server.py
+# backend/app/config.py
 OUTPUT_DIR = Path.home() / "Documents" / "SummarizedVideos"
 TEMP_DIR = Path("/tmp") / "summarizevideosapp"
 WHISPER_MODEL = Path.home() / "models" / "ggml-base.en.bin"
