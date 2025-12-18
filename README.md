@@ -26,11 +26,12 @@ mkdir -p ~/models
 curl -L -o ~/models/ggml-base.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
 ```
 
-3) **Pull an Ollama model** (default fast profile: `qwen3:8b`; pro profile: `qwen2.5:14b`)
+3) **Pull the Ollama model** (default: `gemma3:12b`)
 
 ```bash
-ollama pull qwen3:8b
-ollama pull qwen2.5:14b   # optional "pro" preset
+ollama pull gemma3:12b
+# Optional: uninstall later if you need space
+ollama rm gemma3:12b
 ```
 
 4) **Create a Python 3.12 virtual environment and install deps**
@@ -63,21 +64,16 @@ Create a LaunchAgent plist at `~/Library/LaunchAgents/com.summarizevideosapp.pli
     <key>Label</key><string>com.summarizevideosapp</string>
     <key>ProgramArguments</key>
     <array>
-      <string>/bin/zsh</string>
-      <string>-lc</string>
-      <string>cd /Users/fernando7ct/Projects/Personal/SummarizeVideosApp &amp;&amp; source .venv/bin/activate &amp;&amp; uvicorn server:app --host 0.0.0.0 --port 8000</string>
+      <string>/Users/fernando7ct/Projects/Personal/SummarizeVideosApp/.venv/bin/python3</string>
+      <string>-m</string>
+      <string>uvicorn</string>
+      <string>server:app</string>
+      <string>--host</string><string>0.0.0.0</string>
+      <string>--port</string><string>8000</string>
     </array>
     <key>WorkingDirectory</key><string>/Users/fernando7ct/Projects/Personal/SummarizeVideosApp</string>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
-    <key>EnvironmentVariables</key>
-    <dict>
-      <key>SVA_OUTPUT_DIR</key><string>${HOME}/Documents/SummarizedVideos</string>
-      <key>SVA_TEMP_DIR</key><string>/tmp/summarizevideosapp</string>
-      <key>WHISPER_MODEL_PATH</key><string>${HOME}/models/ggml-base.en.bin</string>
-      <key>OLLAMA_MODEL_FAST</key><string>qwen3:8b</string>
-      <key>OLLAMA_MODEL_PRO</key><string>qwen2.5:14b</string>
-    </dict>
   </dict>
 </plist>
 ```
@@ -91,42 +87,24 @@ launchctl start com.summarizevideosapp
 
 ## Configuration reference
 
-The server reads environment variables at startup. Defaults are set near the top of `server.py`:
+Key paths are hardcoded near the top of `server.py`. Change these variables if you want different locations or binaries:
 
 ```python
 # server.py
-OUTPUT_DIR = Path(os.environ.get("SVA_OUTPUT_DIR", Path.home() / "Documents" / "SummarizedVideos"))
-TEMP_DIR = Path(os.environ.get("SVA_TEMP_DIR", Path("/tmp") / "summarizevideosapp"))
-WHISPER_MODEL = Path(os.environ.get("WHISPER_MODEL_PATH", Path.home() / "models" / "ggml-base.en.bin"))
-```
+OUTPUT_DIR = Path.home() / "Documents" / "SummarizedVideos"
+TEMP_DIR = Path("/tmp") / "summarizevideosapp"
+WHISPER_MODEL = Path.home() / "models" / "ggml-base.en.bin"
+OLLAMA_MODEL = "gemma3:12b"
 
-Command paths also resolve from the environment before falling back to Homebrew defaults:
-
-```python
-# server.py
-YT_DLP = resolve_command("YT_DLP", "/opt/homebrew/bin/yt-dlp")
-WHISPER_CLI = resolve_command("WHISPER_CLI", "/opt/homebrew/bin/whisper-cli")
-OLLAMA = resolve_command("OLLAMA_BIN", "/usr/local/bin/ollama")
+YT_DLP = "/opt/homebrew/bin/yt-dlp"
+WHISPER_CLI = "/opt/homebrew/bin/whisper-cli"
+OLLAMA = "/usr/local/bin/ollama"
 ```
 
 ### Adjusting folders or binaries
-- **Prefer env vars**: Export `SVA_OUTPUT_DIR`, `SVA_TEMP_DIR`, `WHISPER_MODEL_PATH`, `YT_DLP`, `WHISPER_CLI`, or `OLLAMA_BIN` in your shell/LaunchAgent to point to custom locations.
-- **If editing code instead**: update the lines shown above to hardcode your paths. Keep the `Path(...)` wrappers so directories are created automatically.
-- **Different Homebrew prefixes**: on Intel macOS, `ollama` usually lives in `/usr/local/bin`; on Apple Silicon, `yt-dlp`/`whisper-cli` from Homebrew default to `/opt/homebrew/bin`. Override with env vars if your setup differs.
-
-### Model presets
-The UI offers "Fast" and "Pro" radio buttons. Their defaults come from environment variables with sane fallbacks:
-
-```python
-# server.py
-MODEL_PRESETS = {
-    "fast": os.environ.get("OLLAMA_MODEL_FAST", "qwen3:8b"),
-    "pro": os.environ.get("OLLAMA_MODEL_PRO", "qwen2.5:14b"),
-}
-DEFAULT_MODEL_KEY = os.environ.get("OLLAMA_MODEL_DEFAULT", "fast")
-```
-
-Change `OLLAMA_MODEL_FAST`, `OLLAMA_MODEL_PRO`, or `OLLAMA_MODEL_DEFAULT` to point at your preferred local models.
+- Edit the variables above directly if you change output/temp directories, Whisper model path, Ollama model name, or the `yt-dlp`/`whisper-cli`/`ollama` binary paths.
+- Keep the `Path(...)` wrappers so directories are created automatically.
+- On Intel macOS, Homebrew binaries may live in `/usr/local/bin`; update the strings if needed.
 
 ## Notes and tips
 - The UI displays the saved file path and also provides a text area for quick copying.

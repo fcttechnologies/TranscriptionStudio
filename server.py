@@ -19,46 +19,14 @@ from pydantic import BaseModel
 APP_DIR = Path(__file__).parent
 INDEX_HTML = APP_DIR / "index.html"
 
-OUTPUT_DIR = Path(os.environ.get("SVA_OUTPUT_DIR", Path.home() / "Documents" / "SummarizedVideos"))
-TEMP_DIR = Path(os.environ.get("SVA_TEMP_DIR", Path("/tmp") / "summarizevideosapp"))
-WHISPER_MODEL = Path(os.environ.get("WHISPER_MODEL_PATH", Path.home() / "models" / "ggml-base.en.bin"))
+OUTPUT_DIR = Path.home() / "Documents" / "SummarizedVideos"
+TEMP_DIR = Path("/tmp") / "summarizevideosapp"
+WHISPER_MODEL = Path.home() / "models" / "ggml-base.en.bin"
+OLLAMA_MODEL = "gemma3:12b"
 
-
-def resolve_command(env_var: str, default: str) -> str:
-    """Resolve a binary location from an env var, PATH, or a default path.
-
-    This prevents hardcoding Homebrew-specific paths and surfaces clearer errors
-    when prerequisites are missing.
-    """
-
-    candidates = [os.environ.get(env_var), default]
-
-    for candidate in candidates:
-        if not candidate:
-            continue
-
-        candidate_path = Path(candidate)
-        if candidate_path.exists() and candidate_path.is_file():
-            return str(candidate_path)
-
-        resolved = shutil.which(candidate)
-        if resolved:
-            return resolved
-
-    raise RuntimeError(
-        f"Could not find required command. Set {env_var} or install '{default}'."
-    )
-
-
-YT_DLP = resolve_command("YT_DLP", "/opt/homebrew/bin/yt-dlp")
-WHISPER_CLI = resolve_command("WHISPER_CLI", "/opt/homebrew/bin/whisper-cli")
-OLLAMA = resolve_command("OLLAMA_BIN", "/usr/local/bin/ollama")
-
-MODEL_PRESETS = {
-    "fast": os.environ.get("OLLAMA_MODEL_FAST", "qwen3:8b"),
-    "pro": os.environ.get("OLLAMA_MODEL_PRO", "qwen2.5:14b"),
-}
-DEFAULT_MODEL_KEY = os.environ.get("OLLAMA_MODEL_DEFAULT", "fast")
+YT_DLP = "/opt/homebrew/bin/yt-dlp"
+WHISPER_CLI = "/opt/homebrew/bin/whisper-cli"
+OLLAMA = "/usr/local/bin/ollama"
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -80,9 +48,6 @@ TRANSCRIPT_ONLY_STEPS = [
 
 jobs: dict[str, dict] = {}
 
-
-
-
 def cleanup_startup_temp():
     """Clear the temp directory on startup to remove orphaned files from previous runs."""
     if TEMP_DIR.exists():
@@ -95,22 +60,17 @@ def cleanup_startup_temp():
             except Exception as e:
                 print(f"Failed to delete {item}: {e}")
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cleanup_startup_temp()
     yield
 
-
 app = FastAPI(lifespan=lifespan)
-
 
 class JobRequest(BaseModel):
     url: str
     custom_title: str | None = None
     transcript_only: bool = False
-    model: str | None = None
-
 
 @dataclass(slots=True)
 class JobOptions:
@@ -119,8 +79,6 @@ class JobOptions:
     url: str
     custom_title: str | None
     transcript_only: bool
-    model_key: str
-
 
 def run(cmd: list[str]) -> str:
     """Run a command, raising on failure and returning stdout.
@@ -137,27 +95,6 @@ def run(cmd: list[str]) -> str:
         raise RuntimeError(p.stderr.strip() or "Command failed")
     return p.stdout
 
-
-def resolve_model_choice(model_key: str | None) -> tuple[str, str]:
-    """Return the configured model name and key, defaulting when needed.
-
-    Args:
-        model_key: Optional key from the client ("fast"/"pro").
-
-    Returns:
-        Tuple of (model name, normalized key).
-    """
-
-    key = (model_key or DEFAULT_MODEL_KEY).lower()
-    if key not in MODEL_PRESETS:
-        key = DEFAULT_MODEL_KEY
-
-    model_name = MODEL_PRESETS.get(key) or MODEL_PRESETS[DEFAULT_MODEL_KEY]
-    if not model_name:
-        raise RuntimeError("No model configured. Set OLLAMA_MODEL_FAST/PRO.")
-    return model_name, key
-
-
 def build_job_options(req: JobRequest, *, force_transcript_only: bool | None = None) -> JobOptions:
     """Normalize incoming payloads into a JobOptions record.
 
@@ -170,22 +107,18 @@ def build_job_options(req: JobRequest, *, force_transcript_only: bool | None = N
     """
 
     transcript_only = req.transcript_only if force_transcript_only is None else force_transcript_only
-    _, key = resolve_model_choice(req.model)
     return JobOptions(
         url=req.url.strip(),
         custom_title=(req.custom_title or None),
         transcript_only=bool(transcript_only),
-        model_key=key,
     )
 
-
-def create_job_record(job_id: str, *, transcript_only: bool, model_key: str) -> dict:
+def create_job_record(job_id: str, *, transcript_only: bool) -> dict:
     """Create the initial job dictionary persisted in memory.
 
     Args:
         job_id: Unique identifier for this run.
         transcript_only: Whether to skip summarization.
-        model_key: Resolved model tier key (e.g., "fast").
 
     Returns:
         A dictionary stored in the in-memory job registry.
@@ -204,9 +137,7 @@ def create_job_record(job_id: str, *, transcript_only: bool, model_key: str) -> 
         "active_step_index": 0,
         "created_at": time.time(),
         "transcript_only": transcript_only,
-        "model_key": model_key,
     }
-
 
 def set_job(job_id: str, **updates):
     """Update a job entry in place with new state or metadata."""
@@ -215,7 +146,6 @@ def set_job(job_id: str, **updates):
         return
     jobs[job_id].update(updates)
 
-
 def set_step(job_id: str, idx: int, text: str, progress: int):
     """Advance a job to a new UI step with progress metadata."""
 
@@ -223,7 +153,6 @@ def set_step(job_id: str, idx: int, text: str, progress: int):
         return
     step_list = jobs.get(job_id, {}).get("steps", STEPS)
     set_job(job_id, active_step_index=idx, stage_text=text, progress=progress, steps=step_list)
-
 
 def cleanup_old_jobs(retention_seconds: int = 86400):
     """Remove jobs older than the retention period (default 24h)."""
@@ -242,7 +171,6 @@ def cleanup_old_jobs(retention_seconds: int = 86400):
             # Remove from memory
             del jobs[jid]
 
-
 def sanitize_filename(name: str) -> str:
     """Clean user-provided titles for safe filesystem usage."""
 
@@ -250,7 +178,6 @@ def sanitize_filename(name: str) -> str:
     name = re.sub(r"[^\w\s\-\.\(\)&]", "", name).strip()
     name = re.sub(r"\s+", " ", name)
     return name[:140] if name else "Untitled"
-
 
 def dedupe_path(base_path: Path) -> Path:
     """Return a unique path by appending a counter when needed."""
@@ -265,7 +192,6 @@ def dedupe_path(base_path: Path) -> Path:
         if not candidate.exists():
             return candidate
         i += 1
-
 
 def clean_title(t: str) -> str:
     """
@@ -290,13 +216,11 @@ def clean_title(t: str) -> str:
 
     return t
 
-
 def extract_video_title(url: str) -> str:
     """Fetch the video title without downloading media."""
 
     title = run([YT_DLP, "--print", "%(title)s", "--no-download", url]).strip()
     return title or ""
-
 
 def download_audio(job_id: str, url: str) -> tuple[Path, str]:
     """Download an MP3 for the given job and return its path and source title.
@@ -334,7 +258,6 @@ def download_audio(job_id: str, url: str) -> tuple[Path, str]:
     yt_title = extract_video_title(url)
     return mp3, yt_title
 
-
 def transcribe(job_id: str, mp3: Path) -> str:
     """Run whisper-cli to produce a transcript for the downloaded audio.
 
@@ -364,7 +287,6 @@ def transcribe(job_id: str, mp3: Path) -> str:
         raise RuntimeError("Transcription produced empty text")
     return t
 
-
 def chunk_text(text: str, max_chars: int = 9000) -> list[str]:
     """Split text into chunks that prefer whitespace boundaries."""
 
@@ -386,7 +308,6 @@ def chunk_text(text: str, max_chars: int = 9000) -> list[str]:
         i = end
 
     return chunks
-
 
 def extract_json_object(raw: str) -> dict:
     if not raw:
@@ -413,8 +334,7 @@ def extract_json_object(raw: str) -> dict:
 
     raise RuntimeError("Unterminated JSON object in LLM output")
 
-
-def summarize(job_id: str, title_hint: str, url: str, transcript: str, model_name: str) -> dict:
+def summarize(job_id: str, title_hint: str, url: str, transcript: str) -> dict:
     """Summarize a transcript via Ollama, handling long inputs with chunking.
 
     Args:
@@ -422,7 +342,6 @@ def summarize(job_id: str, title_hint: str, url: str, transcript: str, model_nam
         title_hint: Title from YouTube, used to guide the model.
         url: Source URL to include in prompts.
         transcript: Full transcript text to summarize.
-        model_name: Concrete Ollama model to run.
 
     Returns:
         JSON-friendly dict with title, summary, and key_points fields.
@@ -443,19 +362,24 @@ def summarize(job_id: str, title_hint: str, url: str, transcript: str, model_nam
         return f"""
 Create a clean summary for later reuse.
 
-Hard rules:
+1. Analyze CONTENT TYPE:
+- Tax/Finance: Focus on strategies, exact steps, tax forms, and specific money/percentage figures.
+- AI/Apps: Focus on specific features, pricing tiers, limitations, and use cases.
+- Coding/Tutorial: Focus on libraries used, specific commands, and architectural patterns.
+- General: Standard summary.
+
+2. Hard Rules:
 - Output MUST be valid JSON only. No markdown. No extra text.
-- Do NOT invent facts, names, URLs, organizations, tools, numbers, or dates.
-- Do NOT add generic filler (e.g., "consult a professional") unless the speaker says that.
-- If the transcript contains numbers/dates, at least 5 key_points MUST include those numbers/dates verbatim.
-- Keep brand/site names exactly as spoken (don’t “correct” or rewrite them).
+- Do NOT invent facts.
+- If the transcript contains numbers, dates, prices, or versions, the "key_points" MUST include them.
+- "key_points" should be actionable (e.g., "Use tax form X", "Run command Y").
 - Title must be clean: remove hashtags and trailing "..." (even if they appear in the hint).
 
 Return ONLY JSON with EXACT keys:
 {{
   "title": "clear concise title",
-  "summary": "3-6 sentences describing what the video says",
-  "key_points": ["10-16 bullets capturing the most useful points"]
+  "summary": "3-6 sentences describing content, context-aware (e.g. mentions specific strategies or tools)",
+  "key_points": ["10-16 bullets capturing the most useful points, prioritizing numbers/dates"]
 }}
 
 TITLE HINT: {title_hint_clean}
@@ -466,7 +390,7 @@ TRANSCRIPT:
 """.strip()
 
     def call_llm_json(prompt: str) -> dict:
-        raw = run([OLLAMA, "run", model_name, prompt]).strip()
+        raw = run([OLLAMA, "run", OLLAMA_MODEL, prompt]).strip()
         try:
             data = extract_json_object(raw)
         except Exception as e:
@@ -511,17 +435,20 @@ Rules:
 FACTS:
 - ...
 
-NUMBERS / DATES:
+NUMBERS / DATES / PRICES:
 - ...
 
-TERMS / DEFINITIONS:
+STRATEGIES / STEPS:
+- ...
+
+TOOLS / COMMANDS / DEFINITIONS:
 - ...
 
 CHUNK:
 \"\"\"{ch}\"\"\"
 """.strip()
 
-        out = run([OLLAMA, "run", model_name, prompt_notes]).strip()
+        out = run([OLLAMA, "run", OLLAMA_MODEL, prompt_notes]).strip()
         notes_parts.append(out)
 
     notes = "\n".join(notes_parts).strip()
@@ -531,18 +458,19 @@ CHUNK:
     prompt_final = f"""
 Create a clean summary for later reuse from NOTES.
 
-Hard rules:
+1. Analyze CONTENT TYPE (Tax/Finance, AI/Apps, Coding, or General).
+2. Hard rules:
 - Output MUST be valid JSON only. No markdown. No extra text.
-- Do NOT invent facts, names, URLs, organizations, tools, numbers, or dates.
-- Do NOT add generic filler unless it appears in NOTES.
-- If NOTES contain numbers/dates, at least 5 key_points MUST include those numbers/dates verbatim.
+- Do NOT invent facts.
+- If NOTES contain numbers, dates, prices, or versions, "key_points" MUST include them.
+- "key_points" should be actionable (e.g., "Use tax form X", "Run command Y").
 - Title must be clean: remove hashtags and trailing "..." (even if they appear in the hint).
 
 Return ONLY JSON with EXACT keys:
 {{
   "title": "clear concise title",
-  "summary": "3-6 sentences describing what the video says",
-  "key_points": ["10-16 bullets capturing the most useful points"]
+  "summary": "3-6 sentences describing content, context-aware",
+  "key_points": ["10-16 bullets capturing the most useful points, prioritizing numbers/dates"]
 }}
 
 TITLE HINT: {title_hint_clean}
@@ -553,7 +481,6 @@ NOTES:
 """.strip()
 
     return call_llm_json(prompt_final)
-
 
 def write_md(
     job_id: str,
@@ -616,7 +543,6 @@ def write_md(
     out_path.write_text("\n".join(md), encoding="utf-8")
     return out_path, chosen_title, now
 
-
 def write_md_transcript_only(
     job_id: str,
     url: str,
@@ -661,7 +587,6 @@ def write_md_transcript_only(
 
     out_path.write_text("\n".join(md), encoding="utf-8")
     return out_path, chosen_title, now
-
 
 def build_clipboard_payload(
     *,
@@ -708,7 +633,6 @@ def build_clipboard_payload(
     ]
     return "\n".join(lines).strip()
 
-
 def cleanup(job_id: str):
     """Remove temp files for a job and finalize progress bar state."""
 
@@ -720,7 +644,6 @@ def cleanup(job_id: str):
             p.unlink()
         except Exception:
             pass
-
 
 def process_job(job_id: str, options: JobOptions):
     """Full pipeline for a job: download -> transcribe -> summarize -> save.
@@ -739,10 +662,7 @@ def process_job(job_id: str, options: JobOptions):
             )
             summary_data = {"summary": "", "key_points": []}
         else:
-            model_name, _ = resolve_model_choice(options.model_key)
-            summary_data = summarize(
-                job_id, yt_title, options.url, transcript, model_name
-            )
+            summary_data = summarize(job_id, yt_title, options.url, transcript)
             out_path, final_title, saved_ts = write_md(
                 job_id,
                 options.url,
@@ -777,7 +697,6 @@ def process_job(job_id: str, options: JobOptions):
     except Exception as e:
         set_job(job_id, state="error", stage_text="Failed", error=str(e), progress=100)
 
-
 @app.get("/", response_class=HTMLResponse)
 def home():
     """Serve the single-page UI. Accessed by browsers at `/`."""
@@ -785,7 +704,6 @@ def home():
     if not INDEX_HTML.exists():
         return HTMLResponse("Missing index.html", status_code=500)
     return HTMLResponse(INDEX_HTML.read_text(encoding="utf-8"))
-
 
 @app.post("/api/jobs")
 def create_job(req: JobRequest, background: BackgroundTasks):
@@ -800,9 +718,7 @@ def create_job(req: JobRequest, background: BackgroundTasks):
     job_id = str(uuid.uuid4())
     cleanup_old_jobs()  # Maintenance before adding new
     options = build_job_options(req)
-    jobs[job_id] = create_job_record(
-        job_id, transcript_only=options.transcript_only, model_key=options.model_key
-    )
+    jobs[job_id] = create_job_record(job_id, transcript_only=options.transcript_only)
     background.add_task(process_job, job_id, options)
     return {"job_id": job_id, "transcript_only": options.transcript_only}
 
@@ -833,9 +749,7 @@ def shortcut_start(req: JobRequest, background: BackgroundTasks):
     cleanup_old_jobs()  # Maintenance before adding new
     options = build_job_options(req, force_transcript_only=True)
 
-    jobs[job_id] = create_job_record(
-        job_id, transcript_only=options.transcript_only, model_key=options.model_key
-    )
+    jobs[job_id] = create_job_record(job_id, transcript_only=options.transcript_only)
 
     background.add_task(process_job, job_id, options)
 
