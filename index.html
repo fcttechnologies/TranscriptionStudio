@@ -30,6 +30,9 @@
               font-family:ui-monospace,SFMono-Regular,Menlo,monospace; background:white; }
     .btnRow { display:flex; gap:12px; margin-top:10px; flex-wrap:wrap; }
     code { background:#efefef; padding:2px 6px; border-radius:6px; }
+    .optionsRow { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
+    .toggleRow { display:flex; gap:14px; align-items:center; }
+    .toggleLabel { font-weight:600; display:flex; gap:8px; align-items:center; }
   </style>
 </head>
 <body>
@@ -43,6 +46,18 @@
 
     <label class="label">Optional title (filename)</label>
     <input id="customTitle" placeholder="Leave blank to auto-title" autocomplete="off"/>
+
+    <div class="optionsRow">
+      <div id="modelGroup">
+        <div class="label">Model</div>
+        <div class="toggleRow">
+          <label><input type="radio" name="model" value="fast" checked/> Fast</label>
+          <label><input type="radio" name="model" value="pro"/> Pro</label>
+        </div>
+      </div>
+
+      <label class="toggleLabel"><input id="transcriptOnly" type="checkbox"/> Transcript only</label>
+    </div>
 
     <button id="go">Summarize</button>
   </section>
@@ -59,6 +74,7 @@
     <div id="resultBox" class="hidden">
       <div id="resultHeadline" class="resultHeadline"></div>
       <div id="filePath" class="filePath"></div>
+      <div id="optionMeta" class="filePath"></div>
 
       <h2>Paste-ready content</h2>
       <textarea id="pastePack" readonly></textarea>
@@ -78,6 +94,9 @@ const formBox = document.getElementById("formBox");
 const urlEl = document.getElementById("url");
 const titleEl = document.getElementById("customTitle");
 const goEl = document.getElementById("go");
+const modelGroup = document.getElementById("modelGroup");
+const modelInputs = Array.from(document.querySelectorAll('input[name="model"]'));
+const transcriptOnlyEl = document.getElementById("transcriptOnly");
 
 const progressBox = document.getElementById("progressBox");
 const statusText = document.getElementById("statusText");
@@ -88,11 +107,26 @@ const stepsEl = document.getElementById("steps");
 const resultBox = document.getElementById("resultBox");
 const resultHeadline = document.getElementById("resultHeadline");
 const filePath = document.getElementById("filePath");
+const optionMeta = document.getElementById("optionMeta");
 const pastePack = document.getElementById("pastePack");
 const copyBtn = document.getElementById("copy");
 const againBtn = document.getElementById("again");
 
+const MODEL_LABELS = { fast: "Fast", pro: "Pro" };
+
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function selectedModel(){
+  const active = modelInputs.find((input) => input.checked);
+  return active ? active.value : "fast";
+}
+
+function updateModelVisibility(){
+  const hideModelChoice = transcriptOnlyEl.checked;
+  modelGroup.classList.toggle("hidden", hideModelChoice);
+}
+transcriptOnlyEl.addEventListener("change", updateModelVisibility);
+updateModelVisibility();
 
 function renderSteps(steps, activeIndex){
   stepsEl.innerHTML = "";
@@ -113,6 +147,8 @@ async function pollJob(id){
     statusText.textContent = data.stage_text || "Working…";
     barFill.style.width = `${data.progress || 0}%`;
 
+    const isTranscriptOnly = Boolean(data.transcript_only);
+
     const steps = data.steps || [];
     const active = data.active_step_index ?? 0;
 
@@ -128,9 +164,13 @@ async function pollJob(id){
     if(data.state === "done"){
       statusIcon.textContent = "✅";
       resultBox.classList.remove("hidden");
-      resultHeadline.textContent = "Video summarized.";
+      resultHeadline.textContent = isTranscriptOnly ? "Transcript ready." : "Video summarized.";
       filePath.innerHTML = data.file_path ? `Saved: <code>${data.file_path}</code>` : "";
-      pastePack.value = data.paste_pack || "";
+      const modelLabel = MODEL_LABELS[data.model_key] || "";
+      optionMeta.textContent = isTranscriptOnly
+        ? "Mode: Transcript only"
+        : `Mode: Summary (${modelLabel || "Fast"})`;
+      pastePack.value = data.clipboard_payload || "";
       return;
     }
 
@@ -139,6 +179,7 @@ async function pollJob(id){
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = "Video failed to summarize.";
       filePath.textContent = data.error || "Unknown error";
+      optionMeta.textContent = "";
       pastePack.value = "";
       return;
     }
@@ -158,12 +199,15 @@ function resetUI(){
   stepsEl.innerHTML = "";
   pastePack.value = "";
   filePath.innerHTML = "";
+  optionMeta.textContent = "";
   resultHeadline.textContent = "";
 }
 
 goEl.addEventListener("click", async () => {
   const url = urlEl.value.trim();
   const custom_title = titleEl.value.trim();
+  const transcript_only = transcriptOnlyEl.checked;
+  const model = transcript_only ? null : selectedModel();
   if(!url) return;
 
   formBox.classList.add("hidden");
@@ -178,7 +222,7 @@ goEl.addEventListener("click", async () => {
   const res = await fetch("/api/jobs", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({url, custom_title})
+    body: JSON.stringify({url, custom_title, transcript_only, model})
   });
 
   const data = await res.json();
@@ -230,6 +274,10 @@ copyBtn.addEventListener("click", async () => {
 againBtn.addEventListener("click", () => {
   urlEl.value = "";
   titleEl.value = "";
+  transcriptOnlyEl.checked = false;
+  const fastModel = modelInputs.find((input) => input.value === "fast");
+  if (fastModel) fastModel.checked = true;
+  updateModelVisibility();
   resetUI();
 });
 </script>

@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import time
 import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -51,10 +52,11 @@ YT_DLP = resolve_command("YT_DLP", "/opt/homebrew/bin/yt-dlp")
 WHISPER_CLI = resolve_command("WHISPER_CLI", "/opt/homebrew/bin/whisper-cli")
 OLLAMA = resolve_command("OLLAMA_BIN", "/usr/local/bin/ollama")
 
-# Pick one:
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:8b")
-# OLLAMA_MODEL = "qwen2.5:14b"
-# ====================
+MODEL_PRESETS = {
+    "fast": os.environ.get("OLLAMA_MODEL_FAST", "qwen3:8b"),
+    "pro": os.environ.get("OLLAMA_MODEL_PRO", "qwen2.5:14b"),
+}
+DEFAULT_MODEL_KEY = os.environ.get("OLLAMA_MODEL_DEFAULT", "fast")
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
@@ -82,6 +84,16 @@ app = FastAPI()
 class JobRequest(BaseModel):
     url: str
     custom_title: str | None = None
+    transcript_only: bool = False
+    model: str | None = None
+
+
+@dataclass(slots=True)
+class JobOptions:
+    url: str
+    custom_title: str | None
+    transcript_only: bool
+    model_key: str
 
 
 def run(cmd: list[str]) -> str:
@@ -89,6 +101,46 @@ def run(cmd: list[str]) -> str:
     if p.returncode != 0:
         raise RuntimeError(p.stderr.strip() or "Command failed")
     return p.stdout
+
+
+def resolve_model_choice(model_key: str | None) -> tuple[str, str]:
+    key = (model_key or DEFAULT_MODEL_KEY).lower()
+    if key not in MODEL_PRESETS:
+        key = DEFAULT_MODEL_KEY
+
+    model_name = MODEL_PRESETS.get(key) or MODEL_PRESETS[DEFAULT_MODEL_KEY]
+    if not model_name:
+        raise RuntimeError("No model configured. Set OLLAMA_MODEL_FAST/PRO.")
+    return model_name, key
+
+
+def build_job_options(req: JobRequest, *, force_transcript_only: bool | None = None) -> JobOptions:
+    transcript_only = req.transcript_only if force_transcript_only is None else force_transcript_only
+    _, key = resolve_model_choice(req.model)
+    return JobOptions(
+        url=req.url.strip(),
+        custom_title=(req.custom_title or None),
+        transcript_only=bool(transcript_only),
+        model_key=key,
+    )
+
+
+def create_job_record(job_id: str, *, transcript_only: bool, model_key: str) -> dict:
+    steps_for_job = TRANSCRIPT_ONLY_STEPS if transcript_only else STEPS
+    return {
+        "job_id": job_id,
+        "state": "running",
+        "stage_text": "Queued…",
+        "progress": 2,
+        "error": None,
+        "file_path": None,
+        "clipboard_payload": None,
+        "steps": steps_for_job,
+        "active_step_index": 0,
+        "created_at": time.time(),
+        "transcript_only": transcript_only,
+        "model_key": model_key,
+    }
 
 
 def set_job(job_id: str, **updates):
@@ -245,7 +297,7 @@ def extract_json_object(raw: str) -> dict:
     raise RuntimeError("Unterminated JSON object in LLM output")
 
 
-def summarize(job_id: str, title_hint: str, url: str, transcript: str) -> dict:
+def summarize(job_id: str, title_hint: str, url: str, transcript: str, model_name: str) -> dict:
     set_step(job_id, 2, "Summarizing…", 78)
 
     transcript = (transcript or "").strip()
@@ -284,7 +336,7 @@ TRANSCRIPT:
 """.strip()
 
     def call_llm_json(prompt: str) -> dict:
-        raw = run([OLLAMA, "run", OLLAMA_MODEL, prompt]).strip()
+        raw = run([OLLAMA, "run", model_name, prompt]).strip()
         try:
             data = extract_json_object(raw)
         except Exception as e:
@@ -339,7 +391,7 @@ CHUNK:
 \"\"\"{ch}\"\"\"
 """.strip()
 
-        out = run([OLLAMA, "run", OLLAMA_MODEL, prompt_notes]).strip()
+        out = run([OLLAMA, "run", model_name, prompt_notes]).strip()
         notes_parts.append(out)
 
     notes = "\n".join(notes_parts).strip()
@@ -373,7 +425,14 @@ NOTES:
     return call_llm_json(prompt_final)
 
 
-def write_md(job_id: str, url: str, custom_title: str | None, yt_title: str, s: dict, transcript: str) -> tuple[Path, str]:
+def write_md(
+    job_id: str,
+    url: str,
+    custom_title: str | None,
+    yt_title: str,
+    s: dict,
+    transcript: str,
+) -> tuple[Path, str, str]:
     set_step(job_id, 3, "Writing markdown file…", 92)
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -411,7 +470,7 @@ def write_md(job_id: str, url: str, custom_title: str | None, yt_title: str, s: 
     md.append(transcript.strip() or "—")
 
     out_path.write_text("\n".join(md), encoding="utf-8")
-    return out_path, chosen_title
+    return out_path, chosen_title, now
 
 
 def write_md_transcript_only(
@@ -447,6 +506,37 @@ def write_md_transcript_only(
     return out_path, chosen_title, now
 
 
+def build_clipboard_payload(
+    *,
+    title: str,
+    url: str,
+    saved_at: str,
+    summary: str,
+    key_points: list[str],
+    transcript: str,
+    transcript_only: bool,
+) -> str:
+    if transcript_only:
+        return transcript.strip()
+
+    key_points_text = "\n".join([f"- {point}" for point in key_points])
+    lines = [
+        f"TITLE: {title}",
+        f"URL: {url}",
+        f"SAVED: {saved_at}",
+        "",
+        "SUMMARY:",
+        summary.strip(),
+        "",
+        "KEY POINTS:",
+        key_points_text,
+        "",
+        "TRANSCRIPT:",
+        transcript.strip(),
+    ]
+    return "\n".join(lines).strip()
+
+
 def cleanup(job_id: str):
     steps_for_job = jobs.get(job_id, {}).get("steps", STEPS)
     final_idx = max(len(steps_for_job) - 1, 0)
@@ -458,28 +548,41 @@ def cleanup(job_id: str):
             pass
 
 
-def process_job(job_id: str, url: str, custom_title: str | None):
+def process_job(job_id: str, options: JobOptions):
     try:
-        mp3, yt_title = download_audio(job_id, url)
+        mp3, yt_title = download_audio(job_id, options.url)
         transcript = transcribe(job_id, mp3)
-        s = summarize(job_id, yt_title, url, transcript)
-        out_path, final_title = write_md(job_id, url, custom_title, yt_title, s, transcript)
+
+        if options.transcript_only:
+            out_path, final_title, saved_ts = write_md_transcript_only(
+                job_id, options.url, options.custom_title, yt_title, transcript
+            )
+            summary_data = {"summary": "", "key_points": []}
+        else:
+            model_name, _ = resolve_model_choice(options.model_key)
+            summary_data = summarize(
+                job_id, yt_title, options.url, transcript, model_name
+            )
+            out_path, final_title, saved_ts = write_md(
+                job_id,
+                options.url,
+                options.custom_title,
+                yt_title,
+                summary_data,
+                transcript,
+            )
+
         cleanup(job_id)
 
-        paste_pack = "\n".join([
-            f"TITLE: {final_title}",
-            f"URL: {url}",
-            f"SAVED: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            "",
-            "SUMMARY:",
-            (s.get("summary") or "").strip(),
-            "",
-            "KEY POINTS:",
-            "\n".join([f"- {x}" for x in (s.get("key_points") or [])]),
-            "",
-            "TRANSCRIPT:",
-            transcript.strip(),
-        ]).strip()
+        clipboard_payload = build_clipboard_payload(
+            title=final_title,
+            url=options.url,
+            saved_at=saved_ts,
+            summary=(summary_data.get("summary") or ""),
+            key_points=summary_data.get("key_points") or [],
+            transcript=transcript,
+            transcript_only=options.transcript_only,
+        )
 
         set_job(
             job_id,
@@ -488,33 +591,8 @@ def process_job(job_id: str, url: str, custom_title: str | None):
             progress=100,
             file_path=str(out_path),
             file_name=out_path.name,
-            paste_pack=paste_pack,
-            active_step_index=len(STEPS),
-        )
-    except Exception as e:
-        set_job(job_id, state="error", stage_text="Failed", error=str(e), progress=100)
-
-
-def process_job_transcript_only(job_id: str, url: str, custom_title: str | None):
-    try:
-        mp3, yt_title = download_audio(job_id, url)
-        transcript = transcribe(job_id, mp3)
-        out_path, final_title, saved_ts = write_md_transcript_only(
-            job_id, url, custom_title, yt_title, transcript
-        )
-        cleanup(job_id)
-
-        paste_pack = transcript.strip()
-
-        set_job(
-            job_id,
-            state="done",
-            stage_text="Done",
-            progress=100,
-            file_path=str(out_path),
-            file_name=out_path.name,
-            paste_pack=paste_pack,
-            active_step_index=len(jobs[job_id].get("steps", TRANSCRIPT_ONLY_STEPS)),
+            clipboard_payload=clipboard_payload,
+            active_step_index=len(jobs[job_id].get("steps", STEPS)),
         )
     except Exception as e:
         set_job(job_id, state="error", stage_text="Failed", error=str(e), progress=100)
@@ -530,20 +608,12 @@ def home():
 @app.post("/api/jobs")
 def create_job(req: JobRequest, background: BackgroundTasks):
     job_id = str(uuid.uuid4())
-    jobs[job_id] = {
-        "job_id": job_id,
-        "state": "running",
-        "stage_text": "Queued…",
-        "progress": 2,
-        "error": None,
-        "file_path": None,
-        "paste_pack": None,
-        "steps": STEPS,
-        "active_step_index": 0,
-        "created_at": time.time(),
-    }
-    background.add_task(process_job, job_id, req.url, req.custom_title)
-    return {"job_id": job_id}
+    options = build_job_options(req)
+    jobs[job_id] = create_job_record(
+        job_id, transcript_only=options.transcript_only, model_key=options.model_key
+    )
+    background.add_task(process_job, job_id, options)
+    return {"job_id": job_id, "transcript_only": options.transcript_only}
 
 
 @app.get("/api/jobs/{job_id}")
@@ -553,26 +623,15 @@ def get_job(job_id: str):
 @app.post("/api/shortcut/start")
 def shortcut_start(req: JobRequest, background: BackgroundTasks):
     job_id = str(uuid.uuid4())
+    options = build_job_options(req, force_transcript_only=True)
 
-    jobs[job_id] = {
-        "job_id": job_id,
-        "state": "running",
-        "stage_text": "Queued",
-        "progress": 0,
-        "error": None,
-        "file_path": None,
-        "paste_pack": None,
-        "active_step_index": 0,
-        "created_at": time.time(),
-        "steps": TRANSCRIPT_ONLY_STEPS,
-    }
+    jobs[job_id] = create_job_record(
+        job_id, transcript_only=options.transcript_only, model_key=options.model_key
+    )
 
-    background.add_task(process_job_transcript_only, job_id, req.url, req.custom_title)
+    background.add_task(process_job, job_id, options)
 
-    return {
-        "job_id": job_id,
-        "message": "Job started"
-    }
+    return {"job_id": job_id, "message": "Job started", "transcript_only": options.transcript_only}
 
 @app.get("/api/shortcut/status/{job_id}")
 def shortcut_status(job_id: str):
@@ -584,7 +643,7 @@ def shortcut_status(job_id: str):
     if job["state"] == "done":
         return {
             "state": "done",
-            "paste_pack": job.get("paste_pack"),
+            "clipboard_payload": job.get("clipboard_payload"),
         }
 
     if job["state"] == "error":
