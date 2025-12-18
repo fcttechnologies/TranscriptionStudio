@@ -516,7 +516,7 @@ def shortcut_status(job_id: str):
         return {
             "state": "done",
             "file_path": job.get("file_path"),
-            "title": job.get("paste_pack", "").splitlines()[0].replace("TITLE: ", "")
+            "file_name": job.get("file_name"),
         }
 
     if job["state"] == "error":
