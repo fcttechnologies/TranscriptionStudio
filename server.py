@@ -444,8 +444,9 @@ def process_job(job_id: str, url: str, custom_title: str | None):
             stage_text="Done",
             progress=100,
             file_path=str(out_path),
+            file_name=out_path.name,
             paste_pack=paste_pack,
-            active_step_index=len(STEPS),  # marks all steps complete in UI
+            active_step_index=len(STEPS),
         )
     except Exception as e:
         set_job(job_id, state="error", stage_text="Failed", error=str(e), progress=100)
@@ -480,3 +481,52 @@ def create_job(req: JobRequest, background: BackgroundTasks):
 @app.get("/api/jobs/{job_id}")
 def get_job(job_id: str):
     return jobs.get(job_id, {"state": "error", "error": "Job not found"})
+
+@app.post("/api/shortcut/start")
+def shortcut_start(req: JobRequest, background: BackgroundTasks):
+    job_id = str(uuid.uuid4())
+
+    jobs[job_id] = {
+        "job_id": job_id,
+        "state": "running",
+        "stage_text": "Queued",
+        "progress": 0,
+        "error": None,
+        "file_path": None,
+        "paste_pack": None,
+        "active_step_index": 0,
+        "created_at": time.time(),
+    }
+
+    background.add_task(process_job, job_id, req.url, req.custom_title)
+
+    return {
+        "job_id": job_id,
+        "message": "Job started"
+    }
+
+@app.get("/api/shortcut/status/{job_id}")
+def shortcut_status(job_id: str):
+    job = jobs.get(job_id)
+
+    if not job:
+        return {"state": "error", "message": "Job not found"}
+
+    if job["state"] == "done":
+        return {
+            "state": "done",
+            "file_path": job.get("file_path"),
+            "title": job.get("paste_pack", "").splitlines()[0].replace("TITLE: ", "")
+        }
+
+    if job["state"] == "error":
+        return {
+            "state": "error",
+            "message": job.get("error")
+        }
+
+    return {
+        "state": "running",
+        "stage": job.get("stage_text", "Working"),
+        "progress": job.get("progress", 0)
+    }
