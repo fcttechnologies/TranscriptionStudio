@@ -15,7 +15,7 @@
     <label class="label">Video URL</label>
     <input id="url" placeholder="https://…" autocomplete="off"/>
 
-    <div id="titleGroup" class="hidden">
+    <div id="titleGroup">
       <label class="label">Optional title (filename)</label>
       <input id="customTitle" placeholder="Leave blank to auto-title" autocomplete="off"/>
     </div>
@@ -39,19 +39,12 @@
 
     <div id="resultBox" class="hidden">
       <div id="resultHeadline" class="resultHeadline"></div>
-      <div id="filePath" class="filePath hidden"></div>
-      <div id="optionMeta" class="filePath hidden"></div>
+      <div id="filePath" class="filePath"></div>
 
-      <div id="clipboardSection" class="hidden">
-        <h2>Paste-ready content</h2>
-        <textarea id="pastePack" readonly></textarea>
-
-        <div class="btnRow">
-          <button id="copy">Copy</button>
-        </div>
-      </div>
+      <textarea id="pastePack" readonly></textarea>
 
       <div class="btnRow">
+        <button id="copy">Copy</button>
         <button id="again">Summarize another</button>
       </div>
     </div>

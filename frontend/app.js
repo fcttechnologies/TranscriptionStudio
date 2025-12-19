@@ -2,11 +2,11 @@ let jobId = null;
 
 const formBox = document.getElementById("formBox");
 const urlEl = document.getElementById("url");
+const titleGroup = document.getElementById("titleGroup");
 const titleEl = document.getElementById("customTitle");
 const goEl = document.getElementById("go");
 const transcriptOnlyEl = document.getElementById("transcriptOnly");
 const saveMarkdownEl = document.getElementById("saveMarkdown");
-const titleGroup = document.getElementById("titleGroup");
 
 const progressBox = document.getElementById("progressBox");
 const statusText = document.getElementById("statusText");
@@ -17,23 +17,11 @@ const stepsEl = document.getElementById("steps");
 const resultBox = document.getElementById("resultBox");
 const resultHeadline = document.getElementById("resultHeadline");
 const filePath = document.getElementById("filePath");
-const optionMeta = document.getElementById("optionMeta");
-const clipboardSection = document.getElementById("clipboardSection");
 const pastePack = document.getElementById("pastePack");
 const copyBtn = document.getElementById("copy");
 const againBtn = document.getElementById("again");
 
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-function syncTitleVisibility(){
-  if(!titleGroup) return;
-  if(saveMarkdownEl.checked){
-    titleGroup.classList.remove("hidden");
-  } else {
-    titleGroup.classList.add("hidden");
-    titleEl.value = "";
-  }
-}
 
 function renderSteps(steps, activeIndex){
   stepsEl.innerHTML = "";
@@ -69,41 +57,23 @@ async function pollJob(id){
     }
 
     if(data.state === "done"){
-      statusIcon.textContent = "✅";
+      statusIcon.textContent = "";
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = isTranscriptOnly ? "Transcript ready." : "Video summarized.";
-
       if (saveMarkdown) {
-        const displayName = data.file_name || data.custom_title || "Markdown saved.";
-        filePath.textContent = `Saved: ${displayName}`;
-        filePath.classList.remove("hidden");
+        filePath.innerHTML = data.file_path ? `Saved: <code>${data.file_path}</code>` : "File not saved.";
       } else {
         filePath.textContent = "";
-        filePath.classList.add("hidden");
       }
-
-      optionMeta.textContent = "";
-      optionMeta.classList.add("hidden");
-
-      if (clipboardSection) {
-        clipboardSection.classList.add("hidden");
-      }
-
-      pastePack.value = "";
+      pastePack.value = data.clipboard_payload || "";
       return;
     }
 
     if(data.state === "error"){
-      statusIcon.textContent = "⚠️";
+      statusIcon.textContent = "";
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = "Video failed to summarize.";
       filePath.textContent = data.error || "Unknown error";
-      filePath.classList.remove("hidden");
-      optionMeta.textContent = "";
-      optionMeta.classList.add("hidden");
-      if (clipboardSection) {
-        clipboardSection.classList.add("hidden");
-      }
       pastePack.value = "";
       return;
     }
@@ -121,16 +91,18 @@ function resetUI(){
   statusText.textContent = "";
   barFill.style.width = "0%";
   stepsEl.innerHTML = "";
-  filePath.classList.add("hidden");
   pastePack.value = "";
-  filePath.textContent = "";
-  optionMeta.textContent = "";
-  optionMeta.classList.add("hidden");
+  filePath.innerHTML = "";
   resultHeadline.textContent = "";
-  if (clipboardSection) {
-    clipboardSection.classList.add("hidden");
+  updateTitleVisibility();
+}
+
+function updateTitleVisibility(){
+  const show = saveMarkdownEl.checked;
+  titleGroup.classList.toggle("hidden", !show);
+  if (!show) {
+    titleEl.value = "";
   }
-  syncTitleVisibility();
 }
 
 goEl.addEventListener("click", async () => {
@@ -160,8 +132,9 @@ goEl.addEventListener("click", async () => {
   await pollJob(jobId);
 });
 
-saveMarkdownEl.addEventListener("change", syncTitleVisibility);
-syncTitleVisibility();
+saveMarkdownEl.addEventListener("change", updateTitleVisibility);
+
+updateTitleVisibility();
 
 copyBtn.addEventListener("click", async () => {
   const text = pastePack.value || "";
