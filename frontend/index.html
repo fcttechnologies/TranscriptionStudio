@@ -8,7 +8,7 @@
 </head>
 <body>
 <main class="wrap">
-  <h1>Summarize Video</h1>
+  <h1>Download, Transcribe, Summarize, and Save Videos</h1>
   <p class="hint">Paste a TikTok or YouTube link.</p>
 
   <section id="formBox" class="card">
@@ -16,13 +16,19 @@
     <input id="url" placeholder="https://…" autocomplete="off"/>
 
     <div id="titleGroup">
-      <label class="label">Optional title (filename)</label>
+      <label class="label">Title (filename)</label>
       <input id="customTitle" placeholder="Leave blank to auto-title" autocomplete="off"/>
     </div>
 
     <div class="optionsRow">
-      <label class="toggleLabel"><input id="transcriptOnly" type="checkbox"/> Transcript only</label>
-      <label class="toggleLabel"><input id="saveMarkdown" type="checkbox"/> Save markdown file</label>
+      <label class="toggleLabel">
+        <span>Transcript only</span>
+        <input id="transcriptOnly" type="checkbox"/>
+      </label>
+      <label class="toggleLabel">
+        <span>Save markdown file</span>
+        <input id="saveMarkdown" type="checkbox"/>
+      </label>
     </div>
 
     <button id="go">Summarize</button>
