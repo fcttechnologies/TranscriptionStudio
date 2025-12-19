@@ -65,6 +65,9 @@ async function pollJob(id){
       } else {
         filePath.textContent = "";
       }
+      pastePack.classList.remove("hidden");
+      copyBtn.classList.remove("hidden");
+      againBtn.textContent = "Summarize another";
       pastePack.value = data.clipboard_payload || "";
       return;
     }
@@ -75,6 +78,9 @@ async function pollJob(id){
       resultHeadline.textContent = "Video failed to summarize.";
       filePath.textContent = data.error || "Unknown error";
       pastePack.value = "";
+      pastePack.classList.add("hidden");
+      copyBtn.classList.add("hidden");
+      againBtn.textContent = "Try again";
       return;
     }
 
@@ -94,6 +100,10 @@ function resetUI(){
   pastePack.value = "";
   filePath.innerHTML = "";
   resultHeadline.textContent = "";
+  pastePack.classList.remove("hidden");
+  copyBtn.classList.remove("hidden");
+  copyBtn.textContent = "Copy";
+  againBtn.textContent = "Summarize another";
   updateTitleVisibility();
 }
 
