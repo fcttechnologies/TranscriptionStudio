@@ -16,7 +16,7 @@ from .config import (
     YT_DLP,
     FFMPEG_LOCATION,
 )
-from .jobs import JobOptions, jobs, set_job, set_step, STEPS
+from .jobs import JobOptions, jobs, set_job, set_step, step_index, STEPS
 
 logger = logging.getLogger(__name__)
 
@@ -73,13 +73,23 @@ def clean_title(title: str) -> str:
     return title
 
 
+def resolve_title(custom_title: str | None, yt_title: str, summary_title: str | None) -> str:
+    chosen_title = (
+        (custom_title or "").strip()
+        or clean_title(yt_title)
+        or clean_title(summary_title or "")
+        or "Untitled"
+    )
+    return clean_title(chosen_title) or "Untitled"
+
+
 def extract_video_title(url: str) -> str:
     title = run_command([YT_DLP, "--print", "%(title)s", "--no-download", url]).strip()
     return title or ""
 
 
 def download_audio(job_id: str, url: str) -> tuple[Path, str]:
-    set_step(job_id, 0, "Downloading audio…", 18)
+    set_step(job_id, step_index(job_id, "Downloading audio"), "Downloading audio…", 18)
 
     audio_out = TEMP_DIR / f"{job_id}.%(ext)s"
     cmd = [
@@ -110,7 +120,7 @@ def transcribe(job_id: str, mp3: Path) -> str:
     if not WHISPER_MODEL.exists():
         raise RuntimeError(f"Whisper model missing at {WHISPER_MODEL}")
 
-    set_step(job_id, 1, "Transcribing…", 45)
+    set_step(job_id, step_index(job_id, "Transcribing"), "Transcribing…", 45)
 
     out_base = TEMP_DIR / f"{job_id}_transcript"
     cmd = [WHISPER_CLI, "-m", str(WHISPER_MODEL), "-f", str(mp3), "-otxt", "-of", str(out_base)]
@@ -174,7 +184,7 @@ def extract_json_object(raw: str) -> dict:
 
 
 def summarize(job_id: str, title_hint: str, url: str, transcript: str) -> dict:
-    set_step(job_id, 2, "Summarizing…", 78)
+    set_step(job_id, step_index(job_id, "Summarizing"), "Summarizing…", 78)
 
     transcript = (transcript or "").strip()
     if not transcript:
@@ -231,10 +241,10 @@ TRANSCRIPT:
         return data
 
     if len(transcript) <= no_chunk_max_chars:
-        set_step(job_id, 2, "Summarizing… (single pass)", 86)
+        set_step(job_id, step_index(job_id, "Summarizing"), "Summarizing… (single pass)", 86)
         return call_llm_json(prompt_json_from_text(transcript))
 
-    set_step(job_id, 2, "Summarizing… (long transcript fallback)", 86)
+    set_step(job_id, step_index(job_id, "Summarizing"), "Summarizing… (long transcript fallback)", 86)
 
     chunks = chunk_text(transcript, max_chars=9000)
     notes_parts = []
@@ -242,7 +252,7 @@ TRANSCRIPT:
 
     for idx, chunk in enumerate(chunks, start=1):
         progress = 86 + int((idx / total) * 6)
-        set_step(job_id, 2, f"Summarizing… (chunk {idx}/{total})", progress)
+        set_step(job_id, step_index(job_id, "Summarizing"), f"Summarizing… (chunk {idx}/{total})", progress)
 
         prompt_notes = f'''
 Extract factual notes from this transcript chunk.
@@ -273,7 +283,7 @@ CHUNK:
 
     notes = "\n".join(notes_parts).strip()
 
-    set_step(job_id, 2, "Summarizing… (finalizing)", 94)
+    set_step(job_id, step_index(job_id, "Summarizing"), "Summarizing… (finalizing)", 94)
 
     prompt_final = f'''
 Create a clean summary for later reuse from NOTES.
@@ -311,17 +321,11 @@ def write_md(
     summary_data: dict,
     transcript: str,
 ) -> tuple[Path, str, str]:
-    set_step(job_id, 3, "Writing markdown file…", 92)
+    set_step(job_id, step_index(job_id, "Writing markdown file"), "Writing markdown file…", 92)
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    chosen_title = (
-        (custom_title or "").strip()
-        or clean_title(yt_title)
-        or clean_title(summary_data.get("title") or "")
-        or "Untitled"
-    )
-    chosen_title = clean_title(chosen_title) or "Untitled"
+    chosen_title = resolve_title(custom_title, yt_title, summary_data.get("title"))
 
     safe = sanitize_filename(chosen_title)
     out_path = dedupe_path(OUTPUT_DIR / f"{safe}.md")
@@ -361,16 +365,11 @@ def write_md_transcript_only(
     yt_title: str,
     transcript: str,
 ) -> tuple[Path, str, str]:
-    set_step(job_id, 2, "Writing markdown file…", 90)
+    set_step(job_id, step_index(job_id, "Writing markdown file"), "Writing markdown file…", 90)
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    chosen_title = (
-        (custom_title or "").strip()
-        or clean_title(yt_title)
-        or "Untitled"
-    )
-    chosen_title = clean_title(chosen_title) or "Untitled"
+    chosen_title = resolve_title(custom_title, yt_title, None)
 
     safe = sanitize_filename(chosen_title)
     out_path = dedupe_path(OUTPUT_DIR / f"{safe}.md")
@@ -435,20 +434,32 @@ def process_job(job_id: str, options: JobOptions):
         transcript = transcribe(job_id, mp3)
 
         if options.transcript_only:
-            out_path, final_title, saved_ts = write_md_transcript_only(
-                job_id, options.url, options.custom_title, yt_title, transcript
-            )
-            summary_data = {"summary": "", "key_points": []}
+            summary_data = {"summary": "", "key_points": [], "title": ""}
+
+            if options.save_markdown:
+                out_path, final_title, saved_ts = write_md_transcript_only(
+                    job_id, options.url, options.custom_title, yt_title, transcript
+                )
+            else:
+                out_path = None
+                final_title = resolve_title(options.custom_title, yt_title, None)
+                saved_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         else:
             summary_data = summarize(job_id, yt_title, options.url, transcript)
-            out_path, final_title, saved_ts = write_md(
-                job_id,
-                options.url,
-                options.custom_title,
-                yt_title,
-                summary_data,
-                transcript,
-            )
+
+            if options.save_markdown:
+                out_path, final_title, saved_ts = write_md(
+                    job_id,
+                    options.url,
+                    options.custom_title,
+                    yt_title,
+                    summary_data,
+                    transcript,
+                )
+            else:
+                out_path = None
+                final_title = resolve_title(options.custom_title, yt_title, summary_data.get("title"))
+                saved_ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         cleanup(job_id)
 
@@ -467,8 +478,8 @@ def process_job(job_id: str, options: JobOptions):
             state="done",
             stage_text="Done",
             progress=100,
-            file_path=str(out_path),
-            file_name=out_path.name,
+            file_path=str(out_path) if out_path else None,
+            file_name=out_path.name if out_path else None,
             clipboard_payload=clipboard_payload,
             active_step_index=len(jobs[job_id].get("steps", STEPS)),
         )

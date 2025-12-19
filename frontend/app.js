@@ -5,6 +5,7 @@ const urlEl = document.getElementById("url");
 const titleEl = document.getElementById("customTitle");
 const goEl = document.getElementById("go");
 const transcriptOnlyEl = document.getElementById("transcriptOnly");
+const saveMarkdownEl = document.getElementById("saveMarkdown");
 
 const progressBox = document.getElementById("progressBox");
 const statusText = document.getElementById("statusText");
@@ -42,6 +43,7 @@ async function pollJob(id){
     barFill.style.width = `${data.progress || 0}%`;
 
     const isTranscriptOnly = Boolean(data.transcript_only);
+    const saveMarkdown = Boolean(data.save_markdown);
 
     const steps = data.steps || [];
     const active = data.active_step_index ?? 0;
@@ -58,11 +60,16 @@ async function pollJob(id){
       statusIcon.textContent = "✅";
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = isTranscriptOnly ? "Transcript ready." : "Video summarized.";
-      filePath.innerHTML = data.file_path ? `Saved: <code>${data.file_path}</code>` : "";
+      if (saveMarkdown) {
+        filePath.innerHTML = data.file_path ? `Saved: <code>${data.file_path}</code>` : "File not saved.";
+      } else {
+        filePath.textContent = "File saving skipped.";
+      }
       const modelLabel = data.model_name || "gemma3:12b";
+      const saveMeta = saveMarkdown ? "" : " • File saving off";
       optionMeta.textContent = isTranscriptOnly
-        ? "Mode: Transcript only"
-        : `Mode: Summary (${modelLabel})`;
+        ? `Mode: Transcript only${saveMeta}`
+        : `Mode: Summary (${modelLabel})${saveMeta}`;
       pastePack.value = data.clipboard_payload || "";
       return;
     }
@@ -100,6 +107,7 @@ goEl.addEventListener("click", async () => {
   const url = urlEl.value.trim();
   const custom_title = titleEl.value.trim();
   const transcript_only = transcriptOnlyEl.checked;
+  const save_markdown = saveMarkdownEl.checked;
   if(!url) return;
 
   formBox.classList.add("hidden");
@@ -114,7 +122,7 @@ goEl.addEventListener("click", async () => {
   const res = await fetch("/api/jobs", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({url, custom_title, transcript_only})
+    body: JSON.stringify({url, custom_title, transcript_only, save_markdown})
   });
 
   const data = await res.json();
@@ -161,5 +169,6 @@ againBtn.addEventListener("click", () => {
   urlEl.value = "";
   titleEl.value = "";
   transcriptOnlyEl.checked = false;
+  saveMarkdownEl.checked = false;
   resetUI();
 });

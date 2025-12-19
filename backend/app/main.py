@@ -27,6 +27,7 @@ class JobRequest(BaseModel):
     url: str
     custom_title: str | None = None
     transcript_only: bool = False
+    save_markdown: bool = False
 
 
 @asynccontextmanager
@@ -54,10 +55,19 @@ def create_job(req: JobRequest, background: BackgroundTasks):
         url=req.url,
         custom_title=req.custom_title,
         transcript_only=req.transcript_only,
+        save_markdown=req.save_markdown,
     )
-    jobs[job_id] = create_job_record(job_id, transcript_only=options.transcript_only)
+    jobs[job_id] = create_job_record(
+        job_id,
+        transcript_only=options.transcript_only,
+        save_markdown=options.save_markdown,
+    )
     background.add_task(process_job, job_id, options)
-    return {"job_id": job_id, "transcript_only": options.transcript_only}
+    return {
+        "job_id": job_id,
+        "transcript_only": options.transcript_only,
+        "save_markdown": options.save_markdown,
+    }
 
 
 @app.get("/api/jobs/{job_id}")
@@ -69,12 +79,26 @@ def get_job(job_id: str):
 def shortcut_start(req: JobRequest, background: BackgroundTasks):
     job_id = str(uuid.uuid4())
     cleanup_old_jobs(cleanup)
-    options = build_job_options(url=req.url, custom_title=req.custom_title, transcript_only=True)
+    options = build_job_options(
+        url=req.url,
+        custom_title=req.custom_title,
+        transcript_only=True,
+        save_markdown=req.save_markdown,
+    )
 
-    jobs[job_id] = create_job_record(job_id, transcript_only=options.transcript_only)
+    jobs[job_id] = create_job_record(
+        job_id,
+        transcript_only=options.transcript_only,
+        save_markdown=options.save_markdown,
+    )
     background.add_task(process_job, job_id, options)
 
-    return {"job_id": job_id, "message": "Job started", "transcript_only": options.transcript_only}
+    return {
+        "job_id": job_id,
+        "message": "Job started",
+        "transcript_only": options.transcript_only,
+        "save_markdown": options.save_markdown,
+    }
 
 
 @app.get("/api/shortcut/status/{job_id}")

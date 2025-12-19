@@ -1,6 +1,6 @@
 # SummarizeVideosApp
 
-SummarizeVideosApp downloads audio from a TikTok/YouTube URL, transcribes it with Whisper, summarizes it with an Ollama model, and saves a markdown file with the results.
+SummarizeVideosApp downloads audio from a TikTok/YouTube URL, transcribes it with Whisper, summarizes it with an Ollama model, and can optionally save a markdown file with the results.
 
 ## Project layout
 - `frontend/`: static HTML/CSS/JS for the single-page UI.
@@ -9,8 +9,9 @@ SummarizeVideosApp downloads audio from a TikTok/YouTube URL, transcribes it wit
 ## Feature highlights
 - Simple web UI for submitting a video link and optional custom title.
 - Progress tracking across download, transcription, summarization, and file writing steps.
-- Markdown output includes URL, timestamp, summary, key points, and full transcript.
+- Markdown output (when enabled) includes URL, timestamp, summary, key points, and full transcript.
 - Toggle to include transcript only and no summmary or key points.
+- Toggle to skip markdown file creation (off by default) if you only want the clipboard-ready text.
 - Clipboard-ready text block for quick sharing.
 
 ## Quick-start (macOS, Python 3.12)
