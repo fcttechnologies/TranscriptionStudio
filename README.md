@@ -70,14 +70,14 @@ Create a LaunchAgent plist at `~/Library/LaunchAgents/com.summarizevideosapp.pli
     <key>Label</key><string>com.summarizevideosapp</string>
     <key>ProgramArguments</key>
     <array>
-      <string>/Users/fernando7ct/Projects/Personal/SummarizeVideosApp/backend/.venv/bin/python3.12</string>
+      <string>/Users/fernando7ct/Projects/SummarizeVideosApp/backend/.venv/bin/python3.12</string>
       <string>-m</string>
       <string>uvicorn</string>
       <string>backend.app.main:app</string>
       <string>--host</string><string>0.0.0.0</string>
       <string>--port</string><string>8000</string>
     </array>
-    <key>WorkingDirectory</key><string>/Users/fernando7ct/Projects/Personal/SummarizeVideosApp</string>
+    <key>WorkingDirectory</key><string>/Users/fernando7ct/Projects/SummarizeVideosApp</string>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
   </dict>
@@ -88,10 +88,10 @@ You are definitely **not** on `fernando7ct`’s machine, so update these before 
 
 ```bash
 # Point to your venv's Python (check with: source backend/.venv/bin/activate && which python3.12)
-/Users/fernando7ct/Projects/Personal/SummarizeVideosApp/backend/.venv/bin/python3.12
+/Users/fernando7ct/Projects/SummarizeVideosApp/backend/.venv/bin/python3.12
 
 # Point to your clone directory
-/Users/fernando7ct/Projects/Personal/SummarizeVideosApp
+/Users/fernando7ct/Projects/SummarizeVideosApp
 
 # Change port if 8000 is in use
 --port
