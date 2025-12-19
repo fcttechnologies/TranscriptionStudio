@@ -6,6 +6,7 @@ const titleEl = document.getElementById("customTitle");
 const goEl = document.getElementById("go");
 const transcriptOnlyEl = document.getElementById("transcriptOnly");
 const saveMarkdownEl = document.getElementById("saveMarkdown");
+const titleGroup = document.getElementById("titleGroup");
 
 const progressBox = document.getElementById("progressBox");
 const statusText = document.getElementById("statusText");
@@ -17,11 +18,22 @@ const resultBox = document.getElementById("resultBox");
 const resultHeadline = document.getElementById("resultHeadline");
 const filePath = document.getElementById("filePath");
 const optionMeta = document.getElementById("optionMeta");
+const clipboardSection = document.getElementById("clipboardSection");
 const pastePack = document.getElementById("pastePack");
 const copyBtn = document.getElementById("copy");
 const againBtn = document.getElementById("again");
 
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function syncTitleVisibility(){
+  if(!titleGroup) return;
+  if(saveMarkdownEl.checked){
+    titleGroup.classList.remove("hidden");
+  } else {
+    titleGroup.classList.add("hidden");
+    titleEl.value = "";
+  }
+}
 
 function renderSteps(steps, activeIndex){
   stepsEl.innerHTML = "";
@@ -60,17 +72,24 @@ async function pollJob(id){
       statusIcon.textContent = "✅";
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = isTranscriptOnly ? "Transcript ready." : "Video summarized.";
+
       if (saveMarkdown) {
-        filePath.innerHTML = data.file_path ? `Saved: <code>${data.file_path}</code>` : "File not saved.";
+        const displayName = data.file_name || data.custom_title || "Markdown saved.";
+        filePath.textContent = `Saved: ${displayName}`;
+        filePath.classList.remove("hidden");
       } else {
-        filePath.textContent = "File saving skipped.";
+        filePath.textContent = "";
+        filePath.classList.add("hidden");
       }
-      const modelLabel = data.model_name || "gemma3:12b";
-      const saveMeta = saveMarkdown ? "" : " • File saving off";
-      optionMeta.textContent = isTranscriptOnly
-        ? `Mode: Transcript only${saveMeta}`
-        : `Mode: Summary (${modelLabel})${saveMeta}`;
-      pastePack.value = data.clipboard_payload || "";
+
+      optionMeta.textContent = "";
+      optionMeta.classList.add("hidden");
+
+      if (clipboardSection) {
+        clipboardSection.classList.add("hidden");
+      }
+
+      pastePack.value = "";
       return;
     }
 
@@ -79,7 +98,12 @@ async function pollJob(id){
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = "Video failed to summarize.";
       filePath.textContent = data.error || "Unknown error";
+      filePath.classList.remove("hidden");
       optionMeta.textContent = "";
+      optionMeta.classList.add("hidden");
+      if (clipboardSection) {
+        clipboardSection.classList.add("hidden");
+      }
       pastePack.value = "";
       return;
     }
@@ -97,10 +121,16 @@ function resetUI(){
   statusText.textContent = "";
   barFill.style.width = "0%";
   stepsEl.innerHTML = "";
+  filePath.classList.add("hidden");
   pastePack.value = "";
-  filePath.innerHTML = "";
+  filePath.textContent = "";
   optionMeta.textContent = "";
+  optionMeta.classList.add("hidden");
   resultHeadline.textContent = "";
+  if (clipboardSection) {
+    clipboardSection.classList.add("hidden");
+  }
+  syncTitleVisibility();
 }
 
 goEl.addEventListener("click", async () => {
@@ -129,6 +159,9 @@ goEl.addEventListener("click", async () => {
   jobId = data.job_id;
   await pollJob(jobId);
 });
+
+saveMarkdownEl.addEventListener("change", syncTitleVisibility);
+syncTitleVisibility();
 
 copyBtn.addEventListener("click", async () => {
   const text = pastePack.value || "";
