@@ -5,45 +5,23 @@ from typing import Callable, Optional
 STEPS = [
     "Downloading audio",
     "Transcribing",
-    "Writing markdown file",
     "Cleaning up temp files",
 ]
 
-def build_steps(*, save_markdown: bool) -> list[str]:
-    steps = ["Downloading audio", "Transcribing"]
-
-    if save_markdown:
-        steps.append("Writing markdown file")
-    steps.append("Cleaning up temp files")
-    return steps
-
 jobs: dict[str, dict] = {}
 
-@dataclass
-class JobOptions:
-    url: Optional[str]
-    custom_title: Optional[str]
-    save_markdown: bool
-
-
-def create_job_record(
-    job_id: str, *, save_markdown: bool
-) -> dict:
-    steps_for_job = build_steps(
-        save_markdown=save_markdown
-    )
+def create_job_record(job_id: str) -> dict:
+    steps_for_job = STEPS
     return {
         "job_id": job_id,
         "state": "running",
         "stage_text": "Queued…",
         "progress": 2,
         "error": None,
-        "file_path": None,
-        "clipboard_payload": None,
+        "transcript": None,
         "steps": steps_for_job,
         "active_step_index": 0,
         "created_at": time.time(),
-        "save_markdown": save_markdown,
     }
 
 

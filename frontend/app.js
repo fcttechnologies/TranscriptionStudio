@@ -2,13 +2,7 @@ let jobId = null;
 
 const formBox = document.getElementById("formBox");
 const urlEl = document.getElementById("url");
-const urlInputBox = document.getElementById("urlInputBox");
-
-const titleGroup = document.getElementById("titleGroup");
-const titleEl = document.getElementById("customTitle");
 const goEl = document.getElementById("go");
-
-const saveMarkdownEl = document.getElementById("saveMarkdown");
 
 const progressBox = document.getElementById("progressBox");
 const statusText = document.getElementById("statusText");
@@ -18,7 +12,6 @@ const stepsEl = document.getElementById("steps");
 
 const resultBox = document.getElementById("resultBox");
 const resultHeadline = document.getElementById("resultHeadline");
-const filePath = document.getElementById("filePath");
 const pastePack = document.getElementById("pastePack");
 const copyBtn = document.getElementById("copy");
 const againBtn = document.getElementById("again");
@@ -45,8 +38,6 @@ async function pollJob(id) {
     barFill.style.width = `${data.progress || 0}%`;
 
 
-    const saveMarkdown = Boolean(data.save_markdown);
-
     const steps = data.steps || [];
     const active = data.active_step_index ?? 0;
 
@@ -62,26 +53,17 @@ async function pollJob(id) {
       statusIcon.textContent = "";
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = "Transcript ready.";
-      if (saveMarkdown && data.file_path) {
-        filePath.classList.remove("hidden");
-        const fileName = data.file_path.split(/[\\/]/).pop() || data.file_path;
-        filePath.innerHTML = `Saved: <code>${fileName}</code>`;
-      } else {
-        filePath.classList.add("hidden");
-        filePath.textContent = "";
-      }
       pastePack.classList.remove("hidden");
       copyBtn.classList.remove("hidden");
-      againBtn.textContent = "Summarize another";
-      pastePack.value = data.clipboard_payload || "";
+      againBtn.textContent = "Transcribe another";
+      pastePack.value = data.transcript || "";
       return;
     }
 
     if (data.state === "error") {
       statusIcon.textContent = "";
       resultBox.classList.remove("hidden");
-      resultHeadline.textContent = "Video failed to summarize.";
-      filePath.textContent = data.error || "Unknown error";
+      resultHeadline.textContent = "Video failed to transcribe.";
       pastePack.value = "";
       pastePack.classList.add("hidden");
       copyBtn.classList.add("hidden");
@@ -103,39 +85,19 @@ function resetUI() {
   barFill.style.width = "0%";
   stepsEl.innerHTML = "";
   pastePack.value = "";
-  filePath.innerHTML = "";
-  filePath.classList.add("hidden");
   resultHeadline.textContent = "";
   pastePack.classList.remove("hidden");
   copyBtn.classList.remove("hidden");
   copyBtn.textContent = "Copy";
-  againBtn.textContent = "Summarize another";
-  updateTitleVisibility();
-  updateGoButtonLabel();
-}
-
-function updateTitleVisibility() {
-  const show = saveMarkdownEl.checked;
-  titleGroup.classList.toggle("hidden", !show);
-  if (!show) {
-    titleEl.value = "";
-  }
-}
-
-function updateGoButtonLabel() {
-  goEl.textContent = "Transcribe";
+  againBtn.textContent = "Transcribe another";
 }
 
 goEl.addEventListener("click", async () => {
-  const custom_title = titleEl.value.trim();
-
-  const save_markdown = saveMarkdownEl.checked;
-
   const url = urlEl.value.trim();
   if (!url) return;
   const endpoint = "/api/jobs/start";
   const headers = { "Content-Type": "application/json" };
-  const body = JSON.stringify({ url, custom_title, save_markdown });
+  const body = JSON.stringify({ url });
 
   formBox.classList.add("hidden");
   progressBox.classList.remove("hidden");
@@ -163,15 +125,9 @@ goEl.addEventListener("click", async () => {
   } catch (err) {
     statusText.textContent = "Error";
     renderSteps([`Error: ${err.message}`], 0);
-    goEl.textContent = "Try Again";
+    goEl.textContent = "Transcribe";
   }
 });
-
-saveMarkdownEl.addEventListener("change", updateTitleVisibility);
-
-
-updateTitleVisibility();
-updateGoButtonLabel();
 
 copyBtn.addEventListener("click", async () => {
   const text = pastePack.value || "";
@@ -210,8 +166,5 @@ copyBtn.addEventListener("click", async () => {
 
 againBtn.addEventListener("click", () => {
   urlEl.value = "";
-  titleEl.value = "";
-
-  saveMarkdownEl.checked = false;
   resetUI();
 });

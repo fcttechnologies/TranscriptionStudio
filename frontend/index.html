@@ -21,22 +21,7 @@
         <input id="url" placeholder="https://…" autocomplete="off" />
       </div>
 
-
-
-      <div id="titleGroup">
-        <label class="label">Title (filename)</label>
-        <input id="customTitle" placeholder="Leave blank to auto-title" autocomplete="off" />
-      </div>
-
-      <div class="optionsRow">
-
-        <label class="toggleLabel">
-          <span>Save markdown file</span>
-          <input id="saveMarkdown" type="checkbox" />
-        </label>
-      </div>
-
-      <button id="go">Summarize</button>
+      <button id="go">Transcribe</button>
     </section>
 
     <section id="progressBox" class="card hidden">
@@ -52,13 +37,12 @@
 
       <div id="resultBox" class="hidden">
         <div id="resultHeadline" class="resultHeadline"></div>
-        <div id="filePath" class="filePath"></div>
 
         <textarea id="pastePack" readonly></textarea>
 
         <div class="btnRow">
           <button id="copy">Copy</button>
-          <button id="again">Summarize another</button>
+          <button id="again">Transcribe another</button>
         </div>
       </div>
     </section>

@@ -1,15 +1,13 @@
 # TranscribingApp
 
-TranscribingApp downloads audio from a TikTok/YouTube URL, transcribes it with Whisper, and can optionally save a markdown file with the results.
+TranscribingApp downloads audio from a TikTok/YouTube URL, and transcribes it with Whisper.
 
 ## Project layout
 - `frontend/`: static HTML/CSS/JS for the single-page UI.
 - `backend/`: FastAPI app code (`backend/app`) and Python dependencies (`backend/requirements.txt`).
 
 ## Feature highlights
-- Simple web UI for submitting a video link and optional custom title.
-- Markdown output (when enabled) includes URL, timestamp, and full transcript.
-- Toggle to skip markdown file creation (off by default) if you only want the clipboard-ready text.
+- Simple web UI for submitting a video link.
 - Clipboard-ready text block for quick sharing.
 
 ## Quick-start (macOS, Python 3.14)
@@ -18,8 +16,9 @@ TranscribingApp downloads audio from a TikTok/YouTube URL, transcribes it with W
 
 ```bash
 brew install ffmpeg
+```
 
-3) **Create a Python 3 virtual environment and install deps**
+2) **Create a Python 3 virtual environment and install deps**
 
 ```bash
 python3 -m venv backend/.venv
@@ -28,7 +27,7 @@ pip install --upgrade pip
 pip install -r backend/requirements.txt
 ```
 
-4) **Run the server from Terminal**
+3) **Run the server from Terminal**
 
 ```bash
 source backend/.venv/bin/activate
@@ -90,7 +89,6 @@ Key paths are hardcoded near the top of `backend/app/config.py`. Change these va
 
 ```python
 # backend/app/config.py
-OUTPUT_DIR = Path.home() / "Documents" / "TranscribedFiles"
 TEMP_DIR = Path("/tmp") / "transcribingapp"
 WHISPER_MODEL_NAME = "small.en"
 ```
@@ -106,5 +104,5 @@ WHISPER_MODEL_NAME = "small.en"
 - When changing the port or host, update both the plist and wherever you visit the UI (e.g., `http://localhost:9000`).
 
 ## Notes and tips
-- The UI displays the saved file name and also provides a text area for quick copying.
-- Temporary files are cleaned up after each job; output files are kept in the configured output directory.
+- The UI displays a text area for quick copying.
+- Temporary files are cleaned up after each job.
