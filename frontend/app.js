@@ -105,6 +105,7 @@ function resetUI(){
   copyBtn.textContent = "Copy";
   againBtn.textContent = "Summarize another";
   updateTitleVisibility();
+  updateGoButtonLabel();
 }
 
 function updateTitleVisibility(){
@@ -113,6 +114,10 @@ function updateTitleVisibility(){
   if (!show) {
     titleEl.value = "";
   }
+}
+
+function updateGoButtonLabel(){
+  goEl.textContent = transcriptOnlyEl.checked ? "Transcribe" : "Summarize";
 }
 
 goEl.addEventListener("click", async () => {
@@ -143,8 +148,10 @@ goEl.addEventListener("click", async () => {
 });
 
 saveMarkdownEl.addEventListener("change", updateTitleVisibility);
+transcriptOnlyEl.addEventListener("change", updateGoButtonLabel);
 
 updateTitleVisibility();
+updateGoButtonLabel();
 
 copyBtn.addEventListener("click", async () => {
   const text = pastePack.value || "";
