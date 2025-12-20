@@ -62,7 +62,8 @@ async function pollJob(id) {
       resultHeadline.textContent = isTranscriptOnly ? "Transcript ready." : "Video summarized.";
       if (saveMarkdown && data.file_path) {
         filePath.classList.remove("hidden");
-        filePath.innerHTML = `Saved: <code>${data.file_path}</code>`;
+        const fileName = data.file_path.split(/[\\/]/).pop() || data.file_path;
+        filePath.innerHTML = `Saved: <code>${fileName}</code>`;
       } else {
         filePath.classList.add("hidden");
         filePath.textContent = "";
