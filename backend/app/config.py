@@ -10,9 +10,7 @@ INDEX_HTML = FRONTEND_DIR / "index.html"
 OUTPUT_DIR = Path.home() / "Documents" / "TranscribedFiles"
 TEMP_DIR = Path("/tmp") / "transcribingapp"
 WHISPER_MODEL_NAME = "small.en"
-OLLAMA_MODEL = "gemma3:12b"
 
-OLLAMA = "/usr/local/bin/ollama"
 FFMPEG_LOCATION = "/opt/homebrew/bin"
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -27,7 +25,5 @@ __all__ = [
     "OUTPUT_DIR",
     "TEMP_DIR",
     "WHISPER_MODEL_NAME",
-    "OLLAMA_MODEL",
-    "OLLAMA",
     "FFMPEG_LOCATION",
 ]

@@ -5,52 +5,32 @@ from typing import Callable, Optional
 STEPS = [
     "Downloading audio",
     "Transcribing",
-    "Summarizing",
     "Writing markdown file",
     "Cleaning up temp files",
 ]
 
-PDF_STEPS = [
-    "Extracting text",
-    "Cleaning text",
-    "Summarizing",
-    "Writing markdown file",
-    "Cleaning up temp files",
-]
+def build_steps(*, save_markdown: bool) -> list[str]:
+    steps = ["Downloading audio", "Transcribing"]
 
-
-def build_steps(*, mode: str, transcript_only: bool, save_markdown: bool) -> list[str]:
-    if mode == "pdf":
-        steps = ["Extracting text", "Cleaning text"]
-    else:
-        steps = ["Downloading audio", "Transcribing"]
-
-    if not transcript_only:
-        steps.append("Summarizing")
     if save_markdown:
         steps.append("Writing markdown file")
     steps.append("Cleaning up temp files")
     return steps
 
-
 jobs: dict[str, dict] = {}
-
 
 @dataclass
 class JobOptions:
     url: Optional[str]
-    file_path: Optional[str]
     custom_title: Optional[str]
-    transcript_only: bool
     save_markdown: bool
-    mode: str = "video"  # "video" or "pdf"
 
 
 def create_job_record(
-    job_id: str, *, mode: str, transcript_only: bool, save_markdown: bool
+    job_id: str, *, save_markdown: bool
 ) -> dict:
     steps_for_job = build_steps(
-        mode=mode, transcript_only=transcript_only, save_markdown=save_markdown
+        save_markdown=save_markdown
     )
     return {
         "job_id": job_id,
@@ -63,9 +43,7 @@ def create_job_record(
         "steps": steps_for_job,
         "active_step_index": 0,
         "created_at": time.time(),
-        "transcript_only": transcript_only,
         "save_markdown": save_markdown,
-        "mode": mode,
     }
 
 
@@ -99,22 +77,3 @@ def cleanup_old_jobs(cleanup_fn: Callable[[str], None], *, retention_seconds: in
         if (now - created_at > retention_seconds) and (state in ["done", "error"]):
             cleanup_fn(jid)
             del jobs[jid]
-
-
-def build_job_options(
-    *,
-    url: Optional[str] = None,
-    file_path: Optional[str] = None,
-    custom_title: Optional[str],
-    transcript_only: bool,
-    save_markdown: bool,
-    mode: str = "video",
-) -> JobOptions:
-    return JobOptions(
-        url=(url or "").strip() if url else None,
-        file_path=file_path,
-        custom_title=(custom_title or None),
-        transcript_only=bool(transcript_only),
-        save_markdown=bool(save_markdown),
-        mode=mode,
-    )

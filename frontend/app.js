@@ -2,19 +2,13 @@ let jobId = null;
 
 const formBox = document.getElementById("formBox");
 const urlEl = document.getElementById("url");
-const fileInput = document.getElementById("fileInput");
-const tabUrl = document.getElementById("tabUrl");
-const tabPdf = document.getElementById("tabPdf");
 const urlInputBox = document.getElementById("urlInputBox");
-const fileInputBox = document.getElementById("fileInputBox");
 
 const titleGroup = document.getElementById("titleGroup");
 const titleEl = document.getElementById("customTitle");
 const goEl = document.getElementById("go");
-const transcriptOnlyEl = document.getElementById("transcriptOnly");
-const saveMarkdownEl = document.getElementById("saveMarkdown");
 
-let mode = "video"; // "video" or "pdf"
+const saveMarkdownEl = document.getElementById("saveMarkdown");
 
 const progressBox = document.getElementById("progressBox");
 const statusText = document.getElementById("statusText");
@@ -50,7 +44,7 @@ async function pollJob(id) {
     statusText.textContent = data.stage_text || "Working…";
     barFill.style.width = `${data.progress || 0}%`;
 
-    const isTranscriptOnly = Boolean(data.transcript_only);
+
     const saveMarkdown = Boolean(data.save_markdown);
 
     const steps = data.steps || [];
@@ -67,7 +61,7 @@ async function pollJob(id) {
     if (data.state === "done") {
       statusIcon.textContent = "";
       resultBox.classList.remove("hidden");
-      resultHeadline.textContent = isTranscriptOnly ? "Transcript ready." : "Video summarized.";
+      resultHeadline.textContent = "Transcript ready.";
       if (saveMarkdown && data.file_path) {
         filePath.classList.remove("hidden");
         const fileName = data.file_path.split(/[\\/]/).pop() || data.file_path;
@@ -129,56 +123,19 @@ function updateTitleVisibility() {
 }
 
 function updateGoButtonLabel() {
-  goEl.textContent = transcriptOnlyEl.checked ? "Transcribe / Extract" : "Summarize";
+  goEl.textContent = "Transcribe";
 }
-
-function setMode(m) {
-  mode = m;
-  if (mode === "video") {
-    tabUrl.classList.add("active");
-    tabPdf.classList.remove("active");
-    urlInputBox.classList.remove("hidden");
-    fileInputBox.classList.add("hidden");
-    titleEl.placeholder = "Leave blank to auto-title";
-  } else {
-    tabUrl.classList.remove("active");
-    tabPdf.classList.add("active");
-    urlInputBox.classList.add("hidden");
-    fileInputBox.classList.remove("hidden");
-    titleEl.placeholder = "Optional title override";
-  }
-}
-
-tabUrl.addEventListener("click", () => setMode("video"));
-tabPdf.addEventListener("click", () => setMode("pdf"));
 
 goEl.addEventListener("click", async () => {
   const custom_title = titleEl.value.trim();
-  const transcript_only = transcriptOnlyEl.checked;
+
   const save_markdown = saveMarkdownEl.checked;
 
-  let endpoint = "/api/start/url";
-  let body = null;
-  let headers = {};
-
-  if (mode === "video") {
-    const url = urlEl.value.trim();
-    if (!url) return;
-    endpoint = "/api/start/url";
-    headers = { "Content-Type": "application/json" };
-    body = JSON.stringify({ url, custom_title, transcript_only, save_markdown });
-  } else {
-    if (!fileInput.files.length) return;
-    const file = fileInput.files[0];
-    endpoint = "/api/start/file";
-    // No Content-Type header for FormData, browser sets it with boundary
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("transcript_only", transcript_only);
-    fd.append("save_markdown", save_markdown);
-    if (custom_title) fd.append("custom_title", custom_title);
-    body = fd;
-  }
+  const url = urlEl.value.trim();
+  if (!url) return;
+  const endpoint = "/api/jobs/start";
+  const headers = { "Content-Type": "application/json" };
+  const body = JSON.stringify({ url, custom_title, save_markdown });
 
   formBox.classList.add("hidden");
   progressBox.classList.remove("hidden");
@@ -192,7 +149,7 @@ goEl.addEventListener("click", async () => {
   try {
     const res = await fetch(endpoint, {
       method: "POST",
-      headers: headers, // Empty for file
+      headers: headers,
       body: body
     });
 
@@ -211,7 +168,7 @@ goEl.addEventListener("click", async () => {
 });
 
 saveMarkdownEl.addEventListener("change", updateTitleVisibility);
-transcriptOnlyEl.addEventListener("change", updateGoButtonLabel);
+
 
 updateTitleVisibility();
 updateGoButtonLabel();
@@ -253,9 +210,8 @@ copyBtn.addEventListener("click", async () => {
 
 againBtn.addEventListener("click", () => {
   urlEl.value = "";
-  fileInput.value = ""; // Reset file
   titleEl.value = "";
-  transcriptOnlyEl.checked = false;
+
   saveMarkdownEl.checked = false;
   resetUI();
 });

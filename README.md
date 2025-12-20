@@ -1,6 +1,6 @@
 # TranscribingApp
 
-TranscribingApp downloads audio from a TikTok/YouTube URL, transcribes it with Whisper, summarizes it with an Ollama model, and can optionally save a markdown file with the results.
+TranscribingApp downloads audio from a TikTok/YouTube URL, transcribes it with Whisper, and can optionally save a markdown file with the results.
 
 ## Project layout
 - `frontend/`: static HTML/CSS/JS for the single-page UI.
@@ -8,9 +8,7 @@ TranscribingApp downloads audio from a TikTok/YouTube URL, transcribes it with W
 
 ## Feature highlights
 - Simple web UI for submitting a video link and optional custom title.
-- Progress tracking across download, transcription, summarization, and file writing steps.
-- Markdown output (when enabled) includes URL, timestamp, summary, key points, and full transcript.
-- Toggle to include transcript only and no summmary or key points.
+- Markdown output (when enabled) includes URL, timestamp, and full transcript.
 - Toggle to skip markdown file creation (off by default) if you only want the clipboard-ready text.
 - Clipboard-ready text block for quick sharing.
 
@@ -20,18 +18,6 @@ TranscribingApp downloads audio from a TikTok/YouTube URL, transcribes it with W
 
 ```bash
 brew install ffmpeg
-brew install --cask ollama
-```
-
-`ffmpeg` is required by `yt-dlp` for media processing. After installing the Ollama app, launch it once so it starts the local service.
-
-2) **Pull the Ollama model** (default: `gemma3:12b`)
-
-```bash
-ollama pull gemma3:12b
-# Optional: uninstall later if you need space
-ollama rm gemma3:12b
-```
 
 3) **Create a Python 3 virtual environment and install deps**
 
@@ -49,7 +35,7 @@ source backend/.venv/bin/activate
 uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Open `http://localhost:8000` and paste a video URL to summarize.
+Open `http://localhost:8000` and paste a video URL to transcribe.
 
 ## Launching with `launchctl` (keeps the app running after login)
 
@@ -107,25 +93,18 @@ Key paths are hardcoded near the top of `backend/app/config.py`. Change these va
 OUTPUT_DIR = Path.home() / "Documents" / "TranscribedFiles"
 TEMP_DIR = Path("/tmp") / "transcribingapp"
 WHISPER_MODEL_NAME = "small.en"
-OLLAMA_MODEL = "gemma3:12b"
-
-OLLAMA = "/usr/local/bin/ollama"
 ```
 
 ### Adjusting folders or binaries
-- Edit the variables above directly if you change output/temp directories, or the `ollama` binary path.
 - Keep the `Path(...)` wrappers so directories are created automatically.
-- On Intel macOS, Homebrew binaries may live in `/usr/local/bin`; update the strings if needed.
 - `WHISPER_MODEL_NAME` can be changed to other Whisper model sizes (e.g., "medium", "large").
 - If you prefer environment variables, point the plist to a small shell script that exports them before launching `uvicorn`.
 
 ### Verifying your binaries
-- `which python3`, `which uvicorn`, and `which ollama` should match what is in `backend/app/config.py` and the plist.
+- `which python3` and `which uvicorn` should match what is in `backend/app/config.py` and the plist.
 - If you use a different Python version/venv, update both the plist `ProgramArguments` and the `pip install` step to match.
 - When changing the port or host, update both the plist and wherever you visit the UI (e.g., `http://localhost:9000`).
 
 ## Notes and tips
-- The UI displays the saved file path and also provides a text area for quick copying.
-- Long transcripts are chunked along whitespace boundaries to keep context intact before summarization.
+- The UI displays the saved file name and also provides a text area for quick copying.
 - Temporary files are cleaned up after each job; output files are kept in the configured output directory.
-

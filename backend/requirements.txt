@@ -2,7 +2,6 @@ yt-dlp
 openai-whisper
 fastapi
 uvicorn[standard]
-pypdf
 python-multipart
 pydantic
 jinja2
