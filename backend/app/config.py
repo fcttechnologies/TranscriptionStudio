@@ -7,8 +7,8 @@ FRONTEND_DIR = REPO_ROOT / "frontend"
 APP_DIR = Path(__file__).resolve().parent
 INDEX_HTML = FRONTEND_DIR / "index.html"
 
-OUTPUT_DIR = Path.home() / "Documents" / "SummarizedVideos"
-TEMP_DIR = Path("/tmp") / "summarizevideosapp"
+OUTPUT_DIR = Path.home() / "Documents" / "TranscribedFiles"
+TEMP_DIR = Path("/tmp") / "transcribingapp"
 WHISPER_MODEL_NAME = "small.en"
 OLLAMA_MODEL = "gemma3:12b"
 

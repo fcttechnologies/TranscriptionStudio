@@ -1,6 +1,6 @@
-# SummarizeVideosApp
+# TranscribingApp
 
-SummarizeVideosApp downloads audio from a TikTok/YouTube URL, transcribes it with Whisper, summarizes it with an Ollama model, and can optionally save a markdown file with the results.
+TranscribingApp downloads audio from a TikTok/YouTube URL, transcribes it with Whisper, summarizes it with an Ollama model, and can optionally save a markdown file with the results.
 
 ## Project layout
 - `frontend/`: static HTML/CSS/JS for the single-page UI.
@@ -53,24 +53,24 @@ Open `http://localhost:8000` and paste a video URL to summarize.
 
 ## Launching with `launchctl` (keeps the app running after login)
 
-Create a LaunchAgent plist at `~/Library/LaunchAgents/com.summarizevideosapp.plist`:
+Create a LaunchAgent plist at `~/Library/LaunchAgents/com.transcribingapp.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
   <dict>
-    <key>Label</key><string>com.summarizevideosapp</string>
+    <key>Label</key><string>com.transcribingapp</string>
     <key>ProgramArguments</key>
     <array>
-      <string>/Users/fernando7ct/Projects/SummarizeVideosApp/backend/.venv/bin/python3</string>
+      <string>/Users/fernando7ct/Projects/TranscribingApp/backend/.venv/bin/python3</string>
       <string>-m</string>
       <string>uvicorn</string>
       <string>backend.app.main:app</string>
       <string>--host</string><string>0.0.0.0</string>
       <string>--port</string><string>8000</string>
     </array>
-    <key>WorkingDirectory</key><string>/Users/fernando7ct/Projects/SummarizeVideosApp</string>
+    <key>WorkingDirectory</key><string>/Users/fernando7ct/Projects/TranscribingApp</string>
     <key>RunAtLoad</key><true/>
     <key>KeepAlive</key><true/>
   </dict>
@@ -81,10 +81,10 @@ You are definitely **not** on `fernando7ct`’s machine, so update these before 
 
 ```bash
 # Point to your venv's Python (check with: source backend/.venv/bin/activate && which python3)
-/Users/fernando7ct/Projects/SummarizeVideosApp/backend/.venv/bin/python3
+/Users/fernando7ct/Projects/TranscribingApp/backend/.venv/bin/python3
 
 # Point to your clone directory
-/Users/fernando7ct/Projects/SummarizeVideosApp
+/Users/fernando7ct/Projects/TranscribingApp
 
 # Change port if 8000 is in use
 --port
@@ -94,8 +94,8 @@ You are definitely **not** on `fernando7ct`’s machine, so update these before 
 Load plist file and start server:
 
 ```bash
-launchctl load ~/Library/LaunchAgents/com.summarizevideosapp.plist
-launchctl start com.summarizevideosapp
+launchctl load ~/Library/LaunchAgents/com.transcribingapp.plist
+launchctl start com.transcribingapp
 ```
 
 ## Configuration reference
@@ -104,9 +104,9 @@ Key paths are hardcoded near the top of `backend/app/config.py`. Change these va
 
 ```python
 # backend/app/config.py
-OUTPUT_DIR = Path.home() / "Documents" / "SummarizedVideos"
-TEMP_DIR = Path("/tmp") / "summarizevideosapp"
-WHISPER_MODEL_NAME = "base.en"
+OUTPUT_DIR = Path.home() / "Documents" / "TranscribedFiles"
+TEMP_DIR = Path("/tmp") / "transcribingapp"
+WHISPER_MODEL_NAME = "small.en"
 OLLAMA_MODEL = "gemma3:12b"
 
 OLLAMA = "/usr/local/bin/ollama"
@@ -128,3 +128,4 @@ OLLAMA = "/usr/local/bin/ollama"
 - The UI displays the saved file path and also provides a text area for quick copying.
 - Long transcripts are chunked along whitespace boundaries to keep context intact before summarization.
 - Temporary files are cleaned up after each job; output files are kept in the configured output directory.
+
