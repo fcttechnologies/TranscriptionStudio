@@ -399,21 +399,28 @@ def build_clipboard_payload(
     if transcript_only:
         return transcript.strip()
 
-    key_points_text = "\n".join([f"- {point}" for point in key_points])
+    summary_text = (summary or "").strip() or "—"
+    cleaned_points = [str(point).strip() for point in key_points if str(point).strip()]
+    transcript_text = transcript.strip() or "—"
+
     lines = [
-        f"TITLE: {title}",
-        f"URL: {url}",
-        f"SAVED: {saved_at}",
+        "Summary:",
+        summary_text,
         "",
-        "SUMMARY:",
-        summary.strip(),
-        "",
-        "KEY POINTS:",
-        key_points_text,
-        "",
-        "TRANSCRIPT:",
-        transcript.strip(),
+        "Key Points:",
     ]
+
+    if cleaned_points:
+        lines.extend([f"- {point}" for point in cleaned_points])
+    else:
+        lines.append("—")
+
+    lines.extend([
+        "",
+        "Transcript:",
+        transcript_text,
+    ])
+
     return "\n".join(lines).strip()
 
 
