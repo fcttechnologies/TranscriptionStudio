@@ -98,6 +98,43 @@ h1 {
   display: none !important;
 }
 
+.tabs {
+  display: flex;
+  margin-bottom: 1rem;
+  background: var(--surface); /* Changed from --surface-color to --surface */
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border); /* Changed from --border-color to --border */
+}
+
+.tab {
+  flex: 1;
+  padding: 0.75rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted); /* Changed from --text-dim to --text-muted */
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.tab.active {
+  background: var(--primary); /* Changed from --primary-color to --primary */
+  color: white;
+}
+
+#fileInputBox {
+  margin-bottom: 1.5rem;
+  border: 2px dashed var(--border); /* Changed from --border-color to --border */
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+#urlInputBox {
+  margin-bottom: 1.5rem;
+}
+
 .label {
   display: block;
   font-size: 0.875rem;

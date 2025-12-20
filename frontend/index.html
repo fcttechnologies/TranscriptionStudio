@@ -8,12 +8,26 @@
 </head>
 <body>
 <main class="wrap">
-  <h1>Download, Transcribe, Summarize, and Save Videos</h1>
-  <p class="hint">Paste a TikTok or YouTube link.</p>
+  <h1>Summarize Videos & PDFs</h1>
+  <p class="hint">Paste a link or upload a PDF.</p>
 
   <section id="formBox" class="card">
-    <label class="label">Video URL</label>
-    <input id="url" placeholder="https://…" autocomplete="off"/>
+    <div class="tabs">
+      <button id="tabUrl" class="tab active">Video URL</button>
+      <button id="tabPdf" class="tab">PDF File</button>
+    </div>
+
+    <div id="urlInputBox">
+      <label class="label">Video URL</label>
+      <input id="url" placeholder="https://…" autocomplete="off"/>
+    </div>
+
+    <div id="fileInputBox" class="hidden">
+      <label class="label">Upload PDF (max 50MB)</label>
+      <div class="fileRow">
+         <input type="file" id="fileInput" accept=".pdf" />
+      </div>
+    </div>
 
     <div id="titleGroup">
       <label class="label">Title (filename)</label>

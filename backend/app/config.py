@@ -9,11 +9,9 @@ INDEX_HTML = FRONTEND_DIR / "index.html"
 
 OUTPUT_DIR = Path.home() / "Documents" / "SummarizedVideos"
 TEMP_DIR = Path("/tmp") / "summarizevideosapp"
-WHISPER_MODEL = Path.home() / "models" / "ggml-base.en.bin"
+WHISPER_MODEL_NAME = "small.en"
 OLLAMA_MODEL = "gemma3:12b"
 
-YT_DLP = "/opt/homebrew/bin/yt-dlp"
-WHISPER_CLI = "/opt/homebrew/bin/whisper-cli"
 OLLAMA = "/usr/local/bin/ollama"
 FFMPEG_LOCATION = "/opt/homebrew/bin"
 
@@ -28,10 +26,8 @@ __all__ = [
     "INDEX_HTML",
     "OUTPUT_DIR",
     "TEMP_DIR",
-    "WHISPER_MODEL",
+    "WHISPER_MODEL_NAME",
     "OLLAMA_MODEL",
-    "YT_DLP",
-    "WHISPER_CLI",
     "OLLAMA",
     "FFMPEG_LOCATION",
 ]

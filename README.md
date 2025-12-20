@@ -14,25 +14,18 @@ SummarizeVideosApp downloads audio from a TikTok/YouTube URL, transcribes it wit
 - Toggle to skip markdown file creation (off by default) if you only want the clipboard-ready text.
 - Clipboard-ready text block for quick sharing.
 
-## Quick-start (macOS, Python 3.12)
+## Quick-start (macOS, Python 3.14)
 
 1) **Install Homebrew dependencies**
 
 ```bash
-brew install python@3.12 ffmpeg yt-dlp whisper-cpp
+brew install ffmpeg
 brew install --cask ollama
 ```
 
-`whisper-cpp` installs the `whisper-cli` binary; `ffmpeg` is required by `yt-dlp` for some downloads. After installing the Ollama app, launch it once so it starts the local service.
+`ffmpeg` is required by `yt-dlp` for media processing. After installing the Ollama app, launch it once so it starts the local service.
 
-2) **Download a Whisper model** (default path: `~/models/ggml-base.en.bin`)
-
-```bash
-mkdir -p ~/models
-curl -L -o ~/models/ggml-base.en.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.en.bin
-```
-
-3) **Pull the Ollama model** (default: `gemma3:12b`)
+2) **Pull the Ollama model** (default: `gemma3:12b`)
 
 ```bash
 ollama pull gemma3:12b
@@ -40,16 +33,16 @@ ollama pull gemma3:12b
 ollama rm gemma3:12b
 ```
 
-4) **Create a Python 3.12 virtual environment and install deps**
+3) **Create a Python 3 virtual environment and install deps**
 
 ```bash
-python3.12 -m venv backend/.venv
+python3 -m venv backend/.venv
 source backend/.venv/bin/activate
 pip install --upgrade pip
 pip install -r backend/requirements.txt
 ```
 
-5) **Run the server from Terminal**
+4) **Run the server from Terminal**
 
 ```bash
 source backend/.venv/bin/activate
@@ -70,7 +63,7 @@ Create a LaunchAgent plist at `~/Library/LaunchAgents/com.summarizevideosapp.pli
     <key>Label</key><string>com.summarizevideosapp</string>
     <key>ProgramArguments</key>
     <array>
-      <string>/Users/fernando7ct/Projects/SummarizeVideosApp/backend/.venv/bin/python3.12</string>
+      <string>/Users/fernando7ct/Projects/SummarizeVideosApp/backend/.venv/bin/python3</string>
       <string>-m</string>
       <string>uvicorn</string>
       <string>backend.app.main:app</string>
@@ -87,8 +80,8 @@ Create a LaunchAgent plist at `~/Library/LaunchAgents/com.summarizevideosapp.pli
 You are definitely **not** on `fernando7ct`’s machine, so update these before loading:
 
 ```bash
-# Point to your venv's Python (check with: source backend/.venv/bin/activate && which python3.12)
-/Users/fernando7ct/Projects/SummarizeVideosApp/backend/.venv/bin/python3.12
+# Point to your venv's Python (check with: source backend/.venv/bin/activate && which python3)
+/Users/fernando7ct/Projects/SummarizeVideosApp/backend/.venv/bin/python3
 
 # Point to your clone directory
 /Users/fernando7ct/Projects/SummarizeVideosApp
@@ -113,23 +106,21 @@ Key paths are hardcoded near the top of `backend/app/config.py`. Change these va
 # backend/app/config.py
 OUTPUT_DIR = Path.home() / "Documents" / "SummarizedVideos"
 TEMP_DIR = Path("/tmp") / "summarizevideosapp"
-WHISPER_MODEL = Path.home() / "models" / "ggml-base.en.bin"
+WHISPER_MODEL_NAME = "base.en"
 OLLAMA_MODEL = "gemma3:12b"
 
-YT_DLP = "/opt/homebrew/bin/yt-dlp"
-WHISPER_CLI = "/opt/homebrew/bin/whisper-cli"
 OLLAMA = "/usr/local/bin/ollama"
 ```
 
 ### Adjusting folders or binaries
-- Edit the variables above directly if you change output/temp directories, Whisper model path, Ollama model name, or the `yt-dlp`/`whisper-cli`/`ollama` binary paths.
+- Edit the variables above directly if you change output/temp directories, or the `ollama` binary path.
 - Keep the `Path(...)` wrappers so directories are created automatically.
 - On Intel macOS, Homebrew binaries may live in `/usr/local/bin`; update the strings if needed.
-- If your Whisper/Ollama models live elsewhere, update the absolute paths so the backend can find them.
+- `WHISPER_MODEL_NAME` can be changed to other Whisper model sizes (e.g., "medium", "large").
 - If you prefer environment variables, point the plist to a small shell script that exports them before launching `uvicorn`.
 
 ### Verifying your binaries
-- `which python3.12`, `which uvicorn`, `which yt-dlp`, `which whisper-cli`, and `which ollama` should match what is in `backend/app/config.py` and the plist.
+- `which python3`, `which uvicorn`, and `which ollama` should match what is in `backend/app/config.py` and the plist.
 - If you use a different Python version/venv, update both the plist `ProgramArguments` and the `pip install` step to match.
 - When changing the port or host, update both the plist and wherever you visit the UI (e.g., `http://localhost:9000`).
 
