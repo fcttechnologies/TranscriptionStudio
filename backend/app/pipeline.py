@@ -20,6 +20,9 @@ from .jobs import JobOptions, jobs, set_job, set_step, step_index, STEPS
 
 logger = logging.getLogger(__name__)
 
+CHUNK_MAX_CHARS = 13000
+NOTES_MAX_CHARS = 22000
+
 
 def run_command(cmd: list[str]) -> str:
     logger.debug("Running command", extra={"cmd": cmd})
@@ -136,7 +139,7 @@ def transcribe(job_id: str, mp3: Path) -> str:
     return transcript
 
 
-def chunk_text(text: str, max_chars: int = 9000) -> list[str]:
+def chunk_text(text: str) -> list[str]:
     text = text.strip()
     if not text:
         return []
@@ -145,10 +148,10 @@ def chunk_text(text: str, max_chars: int = 9000) -> list[str]:
     i = 0
 
     while i < len(text):
-        end = min(i + max_chars, len(text))
+        end = min(i + CHUNK_MAX_CHARS, len(text))
         if end < len(text):
             boundary = text.rfind(" ", i, end)
-            if boundary != -1 and boundary > i + (max_chars * 0.6):
+            if boundary != -1 and boundary > i + (CHUNK_MAX_CHARS * 0.6):
                 end = boundary
 
         chunks.append(text[i:end].strip())
@@ -191,7 +194,7 @@ def summarize(job_id: str, title_hint: str, url: str, transcript: str) -> dict:
         raise RuntimeError("No transcript text to summarize")
 
     title_hint_clean = clean_title(title_hint)
-    no_chunk_max_chars = 16000
+    no_chunk_max_chars = 24000
 
     def prompt_json_from_text(text: str) -> str:
         return f'''
@@ -246,7 +249,7 @@ TRANSCRIPT:
 
     set_step(job_id, step_index(job_id, "Summarizing"), "Summarizing… (long transcript fallback)", 86)
 
-    chunks = chunk_text(transcript, max_chars=9000)
+    chunks = chunk_text(transcript)
     notes_parts = []
     total = len(chunks)
 
@@ -282,6 +285,30 @@ CHUNK:
         notes_parts.append(run_command([OLLAMA, "run", OLLAMA_MODEL, prompt_notes]).strip())
 
     notes = "\n".join(notes_parts).strip()
+
+    if len(notes) > NOTES_MAX_CHARS:
+        set_step(
+            job_id,
+            step_index(job_id, "Summarizing"),
+            "Summarizing… (compressing notes)",
+            92,
+        )
+
+        prompt_compress = f'''
+Condense these NOTES to under {NOTES_MAX_CHARS} characters.
+
+Rules:
+- Output ONLY plain text (no JSON, no markdown).
+- Keep numbers, names, URLs, brands, dates, and key steps.
+- Remove filler and redundancy but keep factual detail.
+
+NOTES:
+"""{notes}"""
+'''.strip()
+
+        compressed = run_command([OLLAMA, "run", OLLAMA_MODEL, prompt_compress]).strip()
+        if compressed:
+            notes = compressed
 
     set_step(job_id, step_index(job_id, "Summarizing"), "Summarizing… (finalizing)", 94)
 
