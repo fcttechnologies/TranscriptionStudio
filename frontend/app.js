@@ -54,6 +54,10 @@ async function pollJob(id) {
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = "Transcript ready.";
       pastePack.classList.remove("hidden");
+
+      const existingErr = resultBox.querySelector(".error-msg");
+      if (existingErr) existingErr.remove();
+
       copyBtn.classList.remove("hidden");
       againBtn.textContent = "Transcribe another";
       pastePack.value = data.transcript || "";
@@ -64,6 +68,21 @@ async function pollJob(id) {
       statusIcon.textContent = "";
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = "Video failed to transcribe.";
+
+      // Show actual error if available
+      if (data.error) {
+        const errP = document.createElement("p");
+        errP.textContent = data.error;
+        errP.style.color = "red";
+        errP.style.marginTop = "1rem";
+        // Clear previous errors if any (optional, but good practice if reusing box)
+        const existingErr = resultBox.querySelector(".error-msg");
+        if (existingErr) existingErr.remove();
+
+        errP.classList.add("error-msg");
+        resultBox.appendChild(errP);
+      }
+
       pastePack.value = "";
       pastePack.classList.add("hidden");
       copyBtn.classList.add("hidden");
@@ -90,6 +109,9 @@ function resetUI() {
   copyBtn.classList.remove("hidden");
   copyBtn.textContent = "Copy";
   againBtn.textContent = "Transcribe another";
+
+  const existingErr = resultBox.querySelector(".error-msg");
+  if (existingErr) existingErr.remove();
 }
 
 goEl.addEventListener("click", async () => {
@@ -102,6 +124,9 @@ goEl.addEventListener("click", async () => {
   formBox.classList.add("hidden");
   progressBox.classList.remove("hidden");
   resultBox.classList.add("hidden");
+
+  const existingErr = resultBox.querySelector(".error-msg");
+  if (existingErr) existingErr.remove();
 
   statusIcon.textContent = "";
   statusText.textContent = "Queued…";

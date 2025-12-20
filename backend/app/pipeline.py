@@ -45,7 +45,7 @@ def cleanup_startup_temp():
 
 
 def download_audio(job_id: str, url: str) -> Path:
-    set_step(job_id, step_index(job_id, "Downloading audio"), "Downloading audio…", 18)
+    set_step(job_id, step_index(job_id, "Downloading audio"), "Downloading audio…", 40)
 
     audio_out_template = str(TEMP_DIR / f"{job_id}.%(ext)s")
     
@@ -82,7 +82,7 @@ def download_audio(job_id: str, url: str) -> Path:
 
 
 def transcribe(job_id: str, mp3: Path) -> str:
-    set_step(job_id, step_index(job_id, "Transcribing"), "Transcribing…", 45)
+    set_step(job_id, step_index(job_id, "Transcribing"), "Transcribing…", 80)
 
     try:
         result = WHISPER_MODEL.transcribe(str(mp3))
