@@ -140,7 +140,7 @@ goEl.addEventListener("click", async () => {
   barFill.style.width = "2%";
   renderSteps(["Queued…"], 0);
 
-  const res = await fetch("/api/jobs", {
+  const res = await fetch("/api/start/url", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url, custom_title, transcript_only, save_markdown })

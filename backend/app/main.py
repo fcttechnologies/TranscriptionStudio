@@ -47,7 +47,7 @@ def home():
     return FileResponse(INDEX_HTML)
 
 
-@app.post("/api/jobs")
+@app.post("/api/start/url")
 def create_job(req: JobRequest, background: BackgroundTasks):
     job_id = str(uuid.uuid4())
     cleanup_old_jobs(cleanup)
@@ -75,7 +75,7 @@ def get_job(job_id: str):
     return jobs.get(job_id, {"state": "error", "error": "Job not found"})
 
 
-@app.post("/api/shortcut/start")
+@app.post("/api/shortcut/start/url")
 def shortcut_start(req: JobRequest, background: BackgroundTasks):
     job_id = str(uuid.uuid4())
     cleanup_old_jobs(cleanup)
@@ -99,19 +99,3 @@ def shortcut_start(req: JobRequest, background: BackgroundTasks):
         "transcript_only": options.transcript_only,
         "save_markdown": options.save_markdown,
     }
-
-
-@app.get("/api/shortcut/status/{job_id}")
-def shortcut_status(job_id: str):
-    job = jobs.get(job_id)
-
-    if not job:
-        return {"state": "error", "message": "Job not found"}
-
-    if job["state"] == "done":
-        return {"state": "done", "clipboard_payload": job.get("clipboard_payload")}
-
-    if job["state"] == "error":
-        return {"state": "error", "message": job.get("error")}
-
-    return {"state": "running"}
