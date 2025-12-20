@@ -21,9 +21,9 @@ const pastePack = document.getElementById("pastePack");
 const copyBtn = document.getElementById("copy");
 const againBtn = document.getElementById("again");
 
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-function renderSteps(steps, activeIndex){
+function renderSteps(steps, activeIndex) {
   stepsEl.innerHTML = "";
   steps.forEach((s, idx) => {
     const li = document.createElement("li");
@@ -34,8 +34,8 @@ function renderSteps(steps, activeIndex){
   });
 }
 
-async function pollJob(id){
-  while(true){
+async function pollJob(id) {
+  while (true) {
     const res = await fetch(`/api/jobs/${id}`);
     const data = await res.json();
 
@@ -56,13 +56,15 @@ async function pollJob(id){
       renderSteps(steps, active);
     }
 
-    if(data.state === "done"){
+    if (data.state === "done") {
       statusIcon.textContent = "";
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = isTranscriptOnly ? "Transcript ready." : "Video summarized.";
-      if (saveMarkdown) {
-        filePath.innerHTML = data.file_path ? `Saved: <code>${data.file_path}</code>` : "File not saved.";
+      if (saveMarkdown && data.file_path) {
+        filePath.classList.remove("hidden");
+        filePath.innerHTML = `Saved: <code>${data.file_path}</code>`;
       } else {
+        filePath.classList.add("hidden");
         filePath.textContent = "";
       }
       pastePack.classList.remove("hidden");
@@ -72,7 +74,7 @@ async function pollJob(id){
       return;
     }
 
-    if(data.state === "error"){
+    if (data.state === "error") {
       statusIcon.textContent = "";
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = "Video failed to summarize.";
@@ -88,7 +90,7 @@ async function pollJob(id){
   }
 }
 
-function resetUI(){
+function resetUI() {
   jobId = null;
   formBox.classList.remove("hidden");
   progressBox.classList.add("hidden");
@@ -99,6 +101,7 @@ function resetUI(){
   stepsEl.innerHTML = "";
   pastePack.value = "";
   filePath.innerHTML = "";
+  filePath.classList.add("hidden");
   resultHeadline.textContent = "";
   pastePack.classList.remove("hidden");
   copyBtn.classList.remove("hidden");
@@ -108,7 +111,7 @@ function resetUI(){
   updateGoButtonLabel();
 }
 
-function updateTitleVisibility(){
+function updateTitleVisibility() {
   const show = saveMarkdownEl.checked;
   titleGroup.classList.toggle("hidden", !show);
   if (!show) {
@@ -116,7 +119,7 @@ function updateTitleVisibility(){
   }
 }
 
-function updateGoButtonLabel(){
+function updateGoButtonLabel() {
   goEl.textContent = transcriptOnlyEl.checked ? "Transcribe" : "Summarize";
 }
 
@@ -125,7 +128,7 @@ goEl.addEventListener("click", async () => {
   const custom_title = titleEl.value.trim();
   const transcript_only = transcriptOnlyEl.checked;
   const save_markdown = saveMarkdownEl.checked;
-  if(!url) return;
+  if (!url) return;
 
   formBox.classList.add("hidden");
   progressBox.classList.remove("hidden");
@@ -138,8 +141,8 @@ goEl.addEventListener("click", async () => {
 
   const res = await fetch("/api/jobs", {
     method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({url, custom_title, transcript_only, save_markdown})
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, custom_title, transcript_only, save_markdown })
   });
 
   const data = await res.json();
