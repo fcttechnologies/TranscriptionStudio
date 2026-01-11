@@ -1,62 +1,77 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
   <meta charset="utf-8" />
-  <!-- Keep the title short for tab display -->
   <title>Transcribe Videos</title>
-  <!-- Mobile-friendly viewport scaling -->
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Static assets are served via FastAPI at /static -->
+  
+  <!-- Google Fonts: Outfit for headings, Inter for body -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 
 <body>
+  <!-- Ambient Background Elements -->
+  <div class="ambient-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
   <main class="wrap">
     <!-- App headline -->
-    <h1>Transcribe Videos</h1>
-    <p class="hint">Paste a link.</p>
+    <header class="hero-header">
+      <h1>Transcribe Videos</h1>
+      <p class="hint">Paste a TikTok or YouTube link below.</p>
+    </header>
 
-    <section id="formBox" class="card">
-      <!-- URL input for TikTok/YouTube links -->
-
-      <div id="urlInputBox">
-        <label class="label">Video URL</label>
-        <input id="url" placeholder="https://…" autocomplete="off" />
+    <section id="formBox" class="card glass-card">
+      <div id="urlInputBox" class="input-group">
+        <label class="label" for="url">Video URL</label>
+        <div class="input-wrapper">
+          <input id="url" type="url" placeholder="https://www.tiktok.com/..." autocomplete="off" spellcheck="false" />
+        </div>
       </div>
 
-      <!-- Primary call to action -->
-      <button id="go">Transcribe</button>
+      <button id="go" class="btn-primary">
+        <span class="btn-text">Transcribe Video</span>
+        <div class="btn-glow"></div>
+      </button>
     </section>
 
-    <section id="progressBox" class="card hidden">
-      <!-- Status row shows state text and optional icon -->
-      <div class="row">
-        <div id="statusText">Queued…</div>
-        <div id="statusIcon"></div>
+    <section id="progressBox" class="card glass-card hidden">
+      <div class="status-header">
+        <div id="statusText" class="status-text">Initializing...</div>
+        <div id="statusIcon" class="status-icon"></div>
       </div>
 
-      <!-- Progress bar -->
-      <div class="bar">
-        <div id="barFill"></div>
+      <div class="progress-track">
+        <div id="barFill" class="progress-fill"></div>
+        <div class="progress-glow"></div>
       </div>
+      
       <ol id="steps" class="steps"></ol>
 
       <div id="resultBox" class="hidden">
-        <div id="resultHeadline" class="resultHeadline"></div>
+        <div id="resultHeadline" class="resultHeadline">Transcribed Successfully</div>
 
         <!-- Transcript text -->
-        <textarea id="pastePack" readonly></textarea>
+        <div class="textarea-wrapper">
+          <textarea id="pastePack" readonly spellcheck="false"></textarea>
+        </div>
 
         <div class="btnRow">
-          <button id="copy">Copy</button>
-          <button id="again">Transcribe another</button>
+          <button id="copy" class="btn-secondary">Copy Text</button>
+          <button id="again" class="btn-secondary">Transcribe Another</button>
         </div>
       </div>
     </section>
   </main>
 
-  <!-- Frontend logic -->
   <script src="/static/app.js"></script>
 </body>
 
