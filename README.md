@@ -1,108 +1,141 @@
 # TranscribingApp
 
-TranscribingApp downloads audio from a TikTok/YouTube URL, and transcribes it with Whisper.
+TranscribingApp is a lightweight web app that downloads audio from a TikTok or YouTube URL and transcribes it with OpenAI Whisper. It ships with a FastAPI backend and a static HTML/CSS/JS frontend so you can run everything locally.
 
-## Project layout
-- `frontend/`: static HTML/CSS/JS for the single-page UI.
-- `backend/`: FastAPI app code (`backend/app`) and Python dependencies (`backend/requirements.txt`).
+## What’s included
 
-## Feature highlights
-- Simple web UI for submitting a video link.
-- Clipboard-ready text block for quick sharing.
+- **Frontend**: A single-page UI to submit links and copy transcripts (`frontend/`).
+- **Backend**: FastAPI server plus the download/transcription pipeline (`backend/`).
 
-## Quick-start (macOS, Python 3.14)
+## Prerequisites
 
-1) **Install Homebrew dependencies**
+- **Python 3.10+** (3.11 or 3.12 recommended).
+- **ffmpeg** installed and available on your `PATH`.
+- **Git** (optional, for cloning the repo).
+
+## Clone the repo
+
+```bash
+git clone https://github.com/fcttechnologies/TranscribingApp
+cd TranscribingApp
+```
+
+## Install system dependencies
+
+### macOS (Homebrew)
 
 ```bash
 brew install ffmpeg
 ```
 
-2) **Create a Python 3 virtual environment and install deps**
+### Ubuntu/Debian
+
+```bash
+sudo apt-get update
+sudo apt-get install -y ffmpeg
+```
+
+### Windows (Winget)
+
+```powershell
+winget install --id=Gyan.FFmpeg -e
+```
+
+> ✅ **Verify installation**: Run `ffmpeg -version` to confirm the binary is on your PATH.
+
+## Set up the backend
+
+1) **Create and activate a virtual environment**
 
 ```bash
 python3 -m venv backend/.venv
 source backend/.venv/bin/activate
+```
+
+> **Windows PowerShell**
+> ```powershell
+> python -m venv backend\.venv
+> .\backend\.venv\Scripts\Activate.ps1
+> ```
+
+2) **Install Python dependencies**
+
+```bash
 pip install --upgrade pip
 pip install -r backend/requirements.txt
 ```
 
-3) **Run the server from Terminal**
+## Run the server
 
 ```bash
 source backend/.venv/bin/activate
 uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Open `http://localhost:8000` and paste a video URL to transcribe.
+Open the app in your browser:
 
-## Launching with `launchctl` (keeps the app running after login)
-
-Create a LaunchAgent plist at `~/Library/LaunchAgents/com.transcribingapp.plist`:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-  <dict>
-    <key>Label</key><string>com.transcribingapp</string>
-    <key>ProgramArguments</key>
-    <array>
-      <string>/Users/fernando7ct/Projects/TranscribingApp/backend/.venv/bin/python3</string>
-      <string>-m</string>
-      <string>uvicorn</string>
-      <string>backend.app.main:app</string>
-      <string>--host</string><string>0.0.0.0</string>
-      <string>--port</string><string>8000</string>
-    </array>
-    <key>WorkingDirectory</key><string>/Users/fernando7ct/Projects/TranscribingApp</string>
-    <key>RunAtLoad</key><true/>
-    <key>KeepAlive</key><true/>
-  </dict>
-</plist>
+```
+http://localhost:8000
 ```
 
-You are definitely **not** on `fernando7ct`’s machine, so update these before loading:
+## Configuration
 
-```bash
-# Point to your venv's Python (check with: source backend/.venv/bin/activate && which python3)
-/Users/fernando7ct/Projects/TranscribingApp/backend/.venv/bin/python3
+The app’s default configuration lives in `backend/app/config.py`:
 
-# Point to your clone directory
-/Users/fernando7ct/Projects/TranscribingApp
+- `TEMP_DIR`: Where downloaded audio and intermediate files are stored.
+- `WHISPER_MODEL_NAME`: Whisper model size (e.g., `tiny`, `base`, `small.en`, `medium`, `large`).
+- `FFMPEG_LOCATION`: Optional path added to `PATH` if ffmpeg isn’t discoverable.
 
-# Change port if 8000 is in use
---port
-8000
+If you change any of these, restart the server.
+
+## Usage tips
+
+- Make sure the video URL is publicly accessible.
+- Larger Whisper models require more RAM and will run slower.
+- The UI polls job status every ~800ms and updates the progress bar.
+
+## Troubleshooting
+
+**`ffmpeg` not found**
+- Confirm `ffmpeg -version` works in the same shell you use to start Uvicorn.
+- If you installed ffmpeg somewhere unusual, update `FFMPEG_LOCATION` in `backend/app/config.py`.
+
+**`Download failed` or `Audio download failed`**
+- Verify the URL opens in your browser.
+- Some platforms block downloads or require authentication; use public URLs.
+
+**Transcription is slow**
+- Try a smaller model (e.g., `base` or `small.en`).
+- Ensure your machine has enough RAM/CPU for Whisper.
+
+## API endpoints
+
+- `GET /` serves the static frontend.
+- `POST /api/jobs/start` starts a new job. Body: `{ "url": "https://..." }`
+- `GET /api/jobs/{job_id}` polls job progress and returns transcript data.
+
+## Project structure
+
+```
+TranscribingApp/
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── config.py
+│   │   ├── jobs.py
+│   │   ├── main.py
+│   │   └── pipeline.py
+│   └── requirements.txt
+└── frontend/
+    ├── app.js
+    ├── index.html
+    └── styles.css
 ```
 
-Load plist file and start server:
+## Security & privacy
 
-```bash
-launchctl load ~/Library/LaunchAgents/com.transcribingapp.plist
-launchctl start com.transcribingapp
-```
+This project runs locally by default. The URLs you submit are fetched by your machine, and the audio/transcript is stored temporarily in `TEMP_DIR` until cleanup. Do not expose the server to the public internet unless you understand the security implications.
 
-## Configuration reference
+## License
 
-Key paths are hardcoded near the top of `backend/app/config.py`. Change these variables if you want different locations or binaries:
-
-```python
-# backend/app/config.py
-TEMP_DIR = Path("/tmp") / "transcribingapp"
-WHISPER_MODEL_NAME = "small.en"
-```
-
-### Adjusting folders or binaries
-- Keep the `Path(...)` wrappers so directories are created automatically.
-- `WHISPER_MODEL_NAME` can be changed to other Whisper model sizes (e.g., "medium", "large").
-- If you prefer environment variables, point the plist to a small shell script that exports them before launching `uvicorn`.
-
-### Verifying your binaries
-- `which python3` and `which uvicorn` should match what is in `backend/app/config.py` and the plist.
-- If you use a different Python version/venv, update both the plist `ProgramArguments` and the `pip install` step to match.
-- When changing the port or host, update both the plist and wherever you visit the UI (e.g., `http://localhost:9000`).
-
-## Notes and tips
-- The UI displays a text area for quick copying.
-- Temporary files are cleaned up after each job.
+This project is licensed under the MIT License. See `LICENSE` for details.

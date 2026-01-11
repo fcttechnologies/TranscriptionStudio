@@ -3,33 +3,40 @@
 
 <head>
   <meta charset="utf-8" />
+  <!-- Keep the title short for tab display -->
   <title>Transcribe Videos</title>
+  <!-- Mobile-friendly viewport scaling -->
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Static assets are served via FastAPI at /static -->
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 
 <body>
   <main class="wrap">
+    <!-- App headline -->
     <h1>Transcribe Videos</h1>
     <p class="hint">Paste a link.</p>
 
     <section id="formBox" class="card">
-
+      <!-- URL input for TikTok/YouTube links -->
 
       <div id="urlInputBox">
         <label class="label">Video URL</label>
         <input id="url" placeholder="https://…" autocomplete="off" />
       </div>
 
+      <!-- Primary call to action -->
       <button id="go">Transcribe</button>
     </section>
 
     <section id="progressBox" class="card hidden">
+      <!-- Status row shows state text and optional icon -->
       <div class="row">
         <div id="statusText">Queued…</div>
         <div id="statusIcon"></div>
       </div>
 
+      <!-- Progress bar -->
       <div class="bar">
         <div id="barFill"></div>
       </div>
@@ -38,6 +45,7 @@
       <div id="resultBox" class="hidden">
         <div id="resultHeadline" class="resultHeadline"></div>
 
+        <!-- Transcript text -->
         <textarea id="pastePack" readonly></textarea>
 
         <div class="btnRow">
@@ -48,6 +56,7 @@
     </section>
   </main>
 
+  <!-- Frontend logic -->
   <script src="/static/app.js"></script>
 </body>
 

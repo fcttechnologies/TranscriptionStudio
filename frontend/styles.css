@@ -1,4 +1,5 @@
 :root {
+  /* Default (light) theme palette */
   color-scheme: light;
   /* Modern Neutral Palette */
   --bg-page: #f3f4f6;
@@ -28,6 +29,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    /* Dark theme overrides */
     color-scheme: dark;
     --bg-page: #09090b;
     --bg-card: #18181b;
@@ -45,10 +47,12 @@
   }
 }
 
+/* Global reset */
 * {
   box-sizing: border-box;
 }
 
+/* Page layout */
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   padding: 40px 20px;
@@ -63,12 +67,14 @@ body {
   margin: 0;
 }
 
+/* Constrain the content width */
 .wrap {
   width: 100%;
   max-width: 640px;
   margin: 0 auto;
 }
 
+/* App title */
 h1 {
   margin: 0 0 8px 0;
   font-weight: 800;
@@ -78,6 +84,7 @@ h1 {
   color: var(--text-main);
 }
 
+/* Helper text beneath the title */
 .hint {
   margin-top: 0;
   margin-bottom: 40px;
@@ -86,6 +93,7 @@ h1 {
   text-align: center;
 }
 
+/* Card surfaces for form and progress content */
 .card {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -94,10 +102,12 @@ h1 {
   box-shadow: var(--shadow-md);
 }
 
+/* Utility class to hide elements */
 .hidden {
   display: none !important;
 }
 
+/* Labels above form inputs */
 .label {
   display: block;
   font-size: 0.875rem;
@@ -111,6 +121,7 @@ h1 {
   margin-top: 0;
 }
 
+/* Shared input styles */
 input {
   width: 100%;
   padding: 12px;
@@ -121,11 +132,13 @@ input {
   color: var(--text);
 }
 
+/* Highlight focus for accessibility */
 input:focus {
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
+/* Primary button styling */
 button {
   margin-top: 24px;
   padding: 14px 24px;
@@ -141,6 +154,7 @@ button {
   box-shadow: var(--shadow-sm);
 }
 
+/* Hover and active states for buttons */
 button:hover {
   background: var(--primary-hover);
   transform: translateY(-1px);
@@ -151,7 +165,7 @@ button:active {
   transform: translateY(0);
 }
 
-/* Secondary Button Style if class exists, otherwise override usually not needed unless explicit */
+/* Secondary Button Style for inline button rows */
 .btnRow button {
   width: auto;
   flex: 1;
@@ -165,6 +179,7 @@ button:active {
   /* slightly darker surface */
 }
 
+/* Status row aligning text and optional icon */
 .row {
   display: flex;
   justify-content: space-between;
@@ -174,11 +189,13 @@ button:active {
   font-weight: 500;
 }
 
+/* Status icon styling (currently unused text) */
 #statusIcon {
   font-size: 1.25rem;
   color: var(--text-main);
 }
 
+/* Progress bar container */
 .bar {
   height: 8px;
   background: var(--surface);
@@ -190,6 +207,7 @@ button:active {
   position: relative;
 }
 
+/* Progress bar fill */
 #barFill {
   height: 100%;
   width: 0%;
@@ -198,6 +216,7 @@ button:active {
   border-radius: 999px;
 }
 
+/* Step list shows progress through the pipeline */
 .steps {
   margin: 0;
   padding: 0;
@@ -206,6 +225,7 @@ button:active {
   font-size: 0.95rem;
 }
 
+/* Individual step row */
 .steps li {
   margin: 10px 0;
   display: flex;
@@ -213,6 +233,7 @@ button:active {
   gap: 10px;
 }
 
+/* Bullet indicator for each step */
 .steps li::before {
   content: "•";
   color: var(--border);
@@ -220,11 +241,13 @@ button:active {
   line-height: 0;
 }
 
+/* Completed step */
 .steps li.done {
   opacity: 0.5;
   text-decoration: line-through;
 }
 
+/* Active step */
 .steps li.active {
   font-weight: 600;
   color: var(--text-main);
@@ -234,6 +257,7 @@ button:active {
   color: var(--primary);
 }
 
+/* Headline above the transcript text */
 .resultHeadline {
   margin-top: 32px;
   font-weight: 700;
@@ -244,6 +268,7 @@ button:active {
   justify-content: space-between;
 }
 
+/* Optional file path styling (unused in current markup) */
 .filePath {
   margin-top: 8px;
   font-size: 0.85rem;
@@ -258,6 +283,7 @@ button:active {
   overflow-x: auto;
 }
 
+/* Transcript output text area */
 textarea {
   width: 100%;
   height: 320px;
@@ -275,16 +301,19 @@ textarea {
   transition: border-color 0.2s;
 }
 
+/* Focus state for the transcript area */
 textarea:focus {
   border-color: var(--border-focus);
 }
 
+/* Button row under the transcript */
 .btnRow {
   display: flex;
   gap: 16px;
   margin-top: 24px;
 }
 
+/* Inline code styling used in any helper text */
 code {
   background: var(--surface);
   padding: 2px 6px;
@@ -294,7 +323,7 @@ code {
   font-weight: 500;
 }
 
-/* Toggle Switches */
+/* Toggle Switches (unused in current markup but ready for future options) */
 .optionsRow {
   display: flex;
   gap: 16px;
@@ -302,6 +331,7 @@ code {
   flex-wrap: wrap;
 }
 
+/* Label styling for option toggles */
 .toggleLabel {
   font-weight: 500;
   display: flex;
@@ -319,10 +349,12 @@ code {
   user-select: none;
 }
 
+/* Hover state for toggle options */
 .toggleLabel:hover {
   border-color: var(--text-muted);
 }
 
+/* Checkbox/radio inputs inside toggle labels */
 .toggleLabel input {
   margin: 0;
   accent-color: var(--primary);

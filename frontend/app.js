@@ -1,23 +1,31 @@
+// Track the current job so the UI can poll for progress.
 let jobId = null;
 
+// Form elements for starting a transcription.
 const formBox = document.getElementById("formBox");
 const urlEl = document.getElementById("url");
 const goEl = document.getElementById("go");
 
+// Progress UI elements updated during polling.
 const progressBox = document.getElementById("progressBox");
 const statusText = document.getElementById("statusText");
 const statusIcon = document.getElementById("statusIcon");
 const barFill = document.getElementById("barFill");
 const stepsEl = document.getElementById("steps");
 
+// Result UI elements shown when the transcript is ready or failed.
 const resultBox = document.getElementById("resultBox");
 const resultHeadline = document.getElementById("resultHeadline");
 const pastePack = document.getElementById("pastePack");
 const copyBtn = document.getElementById("copy");
 const againBtn = document.getElementById("again");
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+// Small helper to pause between polling loops.
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
+// Render the list of steps with the current active index.
 function renderSteps(steps, activeIndex) {
   stepsEl.innerHTML = "";
   steps.forEach((s, idx) => {
@@ -29,14 +37,15 @@ function renderSteps(steps, activeIndex) {
   });
 }
 
+// Poll the server until the job is done or errored.
 async function pollJob(id) {
   while (true) {
     const res = await fetch(`/api/jobs/${id}`);
     const data = await res.json();
 
+    // Update headline status and progress bar.
     statusText.textContent = data.stage_text || "Working…";
     barFill.style.width = `${data.progress || 0}%`;
-
 
     const steps = data.steps || [];
     const active = data.active_step_index ?? 0;
@@ -50,6 +59,7 @@ async function pollJob(id) {
     }
 
     if (data.state === "done") {
+      // Populate the transcript output area.
       statusIcon.textContent = "";
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = "Transcript ready.";
@@ -65,17 +75,17 @@ async function pollJob(id) {
     }
 
     if (data.state === "error") {
+      // Surface backend errors to the user.
       statusIcon.textContent = "";
       resultBox.classList.remove("hidden");
       resultHeadline.textContent = "Video failed to transcribe.";
 
-      // Show actual error if available
       if (data.error) {
         const errP = document.createElement("p");
         errP.textContent = data.error;
         errP.style.color = "red";
         errP.style.marginTop = "1rem";
-        // Clear previous errors if any (optional, but good practice if reusing box)
+
         const existingErr = resultBox.querySelector(".error-msg");
         if (existingErr) existingErr.remove();
 
@@ -94,6 +104,7 @@ async function pollJob(id) {
   }
 }
 
+// Reset UI state when starting over.
 function resetUI() {
   jobId = null;
   formBox.classList.remove("hidden");
@@ -114,6 +125,7 @@ function resetUI() {
   if (existingErr) existingErr.remove();
 }
 
+// Start a new job when the user clicks "Transcribe".
 goEl.addEventListener("click", async () => {
   const url = urlEl.value.trim();
   if (!url) return;
@@ -137,11 +149,11 @@ goEl.addEventListener("click", async () => {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: headers,
-      body: body
+      body: body,
     });
 
     if (!res.ok) {
-      throw new Error(await res.text() || "Request failed");
+      throw new Error((await res.text()) || "Request failed");
     }
 
     const data = await res.json();
@@ -154,6 +166,7 @@ goEl.addEventListener("click", async () => {
   }
 });
 
+// Copy the transcript to the clipboard, with a fallback for older browsers.
 copyBtn.addEventListener("click", async () => {
   const text = pastePack.value || "";
   if (!text) return;
@@ -164,6 +177,7 @@ copyBtn.addEventListener("click", async () => {
     setTimeout(() => (copyBtn.textContent = "Copy"), 900);
     return;
   } catch (_) {
+    // Fall through to the legacy copy path.
   }
 
   try {
@@ -175,9 +189,6 @@ copyBtn.addEventListener("click", async () => {
 
     const ok = document.execCommand("copy");
     copyBtn.textContent = ok ? "Copied!" : "Tap & Hold to Copy";
-
-    if (!ok) {
-    }
   } catch (e) {
     copyBtn.textContent = "Tap & Hold to Copy";
   } finally {
@@ -189,6 +200,7 @@ copyBtn.addEventListener("click", async () => {
   }
 });
 
+// Reset and allow the user to start over.
 againBtn.addEventListener("click", () => {
   urlEl.value = "";
   resetUI();

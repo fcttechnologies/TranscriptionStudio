@@ -1,28 +1,28 @@
+"""Processing pipeline for downloading audio and running Whisper."""
+
 import logging
+import os
 import shutil
 import subprocess
 from pathlib import Path
 
-from .config import (
-    TEMP_DIR,
-    WHISPER_MODEL_NAME,
-    FFMPEG_LOCATION,
-)
-from .jobs import jobs, set_job, set_step, step_index, STEPS
-
-import yt_dlp
 import whisper
-import os
+import yt_dlp
 
-# Ensure ffmpeg is on PATH for whisper
+from .config import FFMPEG_LOCATION, TEMP_DIR, WHISPER_MODEL_NAME
+from .jobs import STEPS, jobs, set_job, set_step, step_index
+
+# Ensure ffmpeg is on PATH for whisper and yt-dlp post-processing.
 os.environ["PATH"] += os.pathsep + FFMPEG_LOCATION
 
 logger = logging.getLogger(__name__)
 
+# Load the Whisper model once at import time to reuse it across jobs.
 WHISPER_MODEL = whisper.load_model(WHISPER_MODEL_NAME)
 
 
 def run_command(cmd: list[str]) -> str:
+    """Run a subprocess command and raise on non-zero exit."""
     logger.debug("Running command", extra={"cmd": cmd})
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -33,6 +33,7 @@ def run_command(cmd: list[str]) -> str:
 
 
 def cleanup_startup_temp():
+    """Clear leftover temp files from previous runs."""
     if TEMP_DIR.exists():
         for item in TEMP_DIR.iterdir():
             try:
@@ -41,34 +42,42 @@ def cleanup_startup_temp():
                 elif item.is_dir():
                     shutil.rmtree(item)
             except Exception as exc:  # noqa: BLE001
-                logger.warning("Failed to delete temp file", extra={"item": str(item), "error": str(exc)})
+                logger.warning(
+                    "Failed to delete temp file",
+                    extra={"item": str(item), "error": str(exc)},
+                )
 
 
 def download_audio(job_id: str, url: str) -> Path:
+    """Download audio from the provided video URL and return the mp3 path."""
     set_step(job_id, step_index(job_id, "Downloading audio"), "Downloading audio…", 40)
 
+    # Use the job ID to isolate files for concurrent jobs.
     audio_out_template = str(TEMP_DIR / f"{job_id}.%(ext)s")
-    
+
     ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': audio_out_template,
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '192',
-        }],
-        'ffmpeg_location': FFMPEG_LOCATION,
-        'quiet': True,
-        'no_warnings': True,
-        'cachedir': False,
-        'noplaylist': True,
+        "format": "bestaudio/best",
+        "outtmpl": audio_out_template,
+        "postprocessors": [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }
+        ],
+        "ffmpeg_location": FFMPEG_LOCATION,
+        "quiet": True,
+        "no_warnings": True,
+        "cachedir": False,
+        "noplaylist": True,
     }
 
+    # Download with yt-dlp and raise a friendly error if it fails.
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             ydl.download([url])
-        except Exception as e:
-            raise RuntimeError(f"Download failed: {str(e)}") from e
+        except Exception as exc:
+            raise RuntimeError(f"Download failed: {str(exc)}") from exc
 
     mp3 = TEMP_DIR / f"{job_id}.mp3"
     if not mp3.exists():
@@ -82,21 +91,22 @@ def download_audio(job_id: str, url: str) -> Path:
 
 
 def transcribe(job_id: str, mp3: Path) -> str:
+    """Run Whisper transcription and return the text."""
     set_step(job_id, step_index(job_id, "Transcribing"), "Transcribing…", 80)
 
     try:
         result = WHISPER_MODEL.transcribe(str(mp3))
         transcript = result.get("text", "").strip()
-    except Exception as e:
-        raise RuntimeError(f"Transcription failed: {str(e)}") from e
+    except Exception as exc:
+        raise RuntimeError(f"Transcription failed: {str(exc)}") from exc
 
     if not transcript:
         raise RuntimeError("Transcription produced empty text")
     return transcript
 
 
-
 def cleanup(job_id: str):
+    """Remove temp files for a completed job."""
     steps_for_job = jobs.get(job_id, {}).get("steps", STEPS)
     final_idx = max(len(steps_for_job) - 1, 0)
     set_step(job_id, final_idx, "Cleaning up…", 100)
@@ -108,6 +118,7 @@ def cleanup(job_id: str):
 
 
 def process_job(job_id: str, url: str):
+    """Orchestrate the download/transcribe/cleanup flow for one job."""
     try:
         mp3 = download_audio(job_id, url)
         transcript = transcribe(job_id, mp3)
@@ -117,6 +128,7 @@ def process_job(job_id: str, url: str):
 
 
 def _finalize_job(job_id: str, text: str):
+    """Mark a job as complete and store the transcript."""
     cleanup(job_id)
 
     steps = jobs[job_id].get("steps", STEPS)
@@ -129,4 +141,3 @@ def _finalize_job(job_id: str, text: str):
         transcript=text,
         active_step_index=len(steps),
     )
-
