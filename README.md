@@ -111,8 +111,9 @@ If you change any of these, restart the server.
 ## API endpoints
 
 - `GET /` serves the static frontend.
-- `POST /api/jobs/start` starts a new job. Body: `{ "url": "https://..." }`
+- `POST /api/jobs/start` starts a new job (for video/website URLs). Body: `{ "url": "https://..." }`
 - `GET /api/jobs/{job_id}` polls job progress and returns transcript data.
+- `POST /api/transcribe/file` transcribes an uploaded audio file directly. Accepts multipart form with field `file`. Returns `{ "job_id": "...", "transcript": "...", "filename": "..." }`. Temp file is deleted after processing.
 
 ## Project structure
 
