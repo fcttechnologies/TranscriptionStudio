@@ -16,10 +16,14 @@ INDEX_HTML = FRONTEND_DIR / "index.html"
 # Adjust this path if you need a different storage location.
 TEMP_DIR = Path("/tmp") / "transcribingapp"
 
-# Default Whisper model to load; change if you want a different size/quality.
-WHISPER_MODEL_NAME = "small.en"
+# Default Faster-Whisper model to load; tune size for quality vs speed/RAM.
+WHISPER_MODEL_NAME = "base.en"
 
-# Location of the ffmpeg binary used by yt-dlp/Whisper.
+# Faster-Whisper runtime settings.
+WHISPER_DEVICE = "cpu"
+WHISPER_COMPUTE_TYPE = "int8"
+
+# Location of the ffmpeg binary used by yt-dlp/audio processing.
 FFMPEG_LOCATION = "/opt/homebrew/bin"
 
 # Ensure the temp directory exists before any job runs.
@@ -34,5 +38,7 @@ __all__ = [
     "INDEX_HTML",
     "TEMP_DIR",
     "WHISPER_MODEL_NAME",
+    "WHISPER_DEVICE",
+    "WHISPER_COMPUTE_TYPE",
     "FFMPEG_LOCATION",
 ]

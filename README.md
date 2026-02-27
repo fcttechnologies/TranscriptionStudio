@@ -1,6 +1,6 @@
 # TranscribingApp
 
-TranscribingApp is a lightweight web app that downloads audio from a TikTok or YouTube URL and transcribes it with OpenAI Whisper. It ships with a FastAPI backend and a static HTML/CSS/JS frontend so you can run everything locally.
+TranscribingApp is a lightweight web app that downloads audio from a TikTok or YouTube URL and transcribes it with Faster-Whisper (CTranslate2 Whisper runtime). It ships with a FastAPI backend and a static HTML/CSS/JS frontend so you can run everything locally.
 
 ## What’s included
 
@@ -83,7 +83,9 @@ http://localhost:8000
 The app’s default configuration lives in `backend/app/config.py`:
 
 - `TEMP_DIR`: Where downloaded audio and intermediate files are stored.
-- `WHISPER_MODEL_NAME`: Whisper model size (e.g., `tiny`, `base`, `small.en`, `medium`, `large`).
+- `WHISPER_MODEL_NAME`: Faster-Whisper model size (e.g., `tiny.en`, `base.en`, `small.en`, `medium.en`).
+- `WHISPER_DEVICE`: Inference device (default `cpu`).
+- `WHISPER_COMPUTE_TYPE`: Precision/quantization mode (default `int8` for low RAM on CPU).
 - `FFMPEG_LOCATION`: Optional path added to `PATH` if ffmpeg isn’t discoverable.
 
 If you change any of these, restart the server.
@@ -91,7 +93,7 @@ If you change any of these, restart the server.
 ## Usage tips
 
 - Make sure the video URL is publicly accessible.
-- Larger Whisper models require more RAM and will run slower.
+- Larger Whisper models require more RAM and can run slower.
 - The UI polls job status every ~800ms and updates the progress bar.
 
 ## Troubleshooting
@@ -105,8 +107,8 @@ If you change any of these, restart the server.
 - Some platforms block downloads or require authentication; use public URLs.
 
 **Transcription is slow**
-- Try a smaller model (e.g., `base` or `small.en`).
-- Ensure your machine has enough RAM/CPU for Whisper.
+- Try a smaller model (e.g., `base.en` or `small.en`).
+- Use `WHISPER_COMPUTE_TYPE = "int8"` on CPU for lower RAM usage.
 
 ## API endpoints
 

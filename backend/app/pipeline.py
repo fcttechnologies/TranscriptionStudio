@@ -6,19 +6,29 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import whisper
 import yt_dlp
+from faster_whisper import WhisperModel
 
-from .config import FFMPEG_LOCATION, TEMP_DIR, WHISPER_MODEL_NAME
+from .config import (
+    FFMPEG_LOCATION,
+    TEMP_DIR,
+    WHISPER_COMPUTE_TYPE,
+    WHISPER_DEVICE,
+    WHISPER_MODEL_NAME,
+)
 from .jobs import STEPS, jobs, set_job, set_step, step_index
 
-# Ensure ffmpeg is on PATH for whisper and yt-dlp post-processing.
+# Ensure ffmpeg is on PATH for audio processing and yt-dlp post-processing.
 os.environ["PATH"] += os.pathsep + FFMPEG_LOCATION
 
 logger = logging.getLogger(__name__)
 
-# Load the Whisper model once at import time to reuse it across jobs.
-WHISPER_MODEL = whisper.load_model(WHISPER_MODEL_NAME)
+# Load the Faster-Whisper model once at import time to reuse it across jobs.
+WHISPER_MODEL = WhisperModel(
+    WHISPER_MODEL_NAME,
+    device=WHISPER_DEVICE,
+    compute_type=WHISPER_COMPUTE_TYPE,
+)
 
 
 def run_command(cmd: list[str]) -> str:
@@ -95,8 +105,10 @@ def transcribe(job_id: str, mp3: Path) -> str:
     set_step(job_id, step_index(job_id, "Transcribing"), "Transcribing…", 80)
 
     try:
-        result = WHISPER_MODEL.transcribe(str(mp3))
-        transcript = result.get("text", "").strip()
+        segments, _ = WHISPER_MODEL.transcribe(str(mp3))
+        transcript = " ".join(
+            segment.text.strip() for segment in segments if segment.text and segment.text.strip()
+        ).strip()
     except Exception as exc:
         raise RuntimeError(f"Transcription failed: {str(exc)}") from exc
 
