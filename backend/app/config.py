@@ -17,7 +17,7 @@ INDEX_HTML = FRONTEND_DIR / "index.html"
 TEMP_DIR = Path("/tmp") / "transcribingapp"
 
 # Default Faster-Whisper model to load; tune size for quality vs speed/RAM.
-WHISPER_MODEL_NAME = "base.en"
+WHISPER_MODEL_NAME = "small.en"
 
 # Faster-Whisper runtime settings.
 WHISPER_DEVICE = "cpu"
