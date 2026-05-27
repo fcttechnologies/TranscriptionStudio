@@ -19,7 +19,8 @@ from .config import (
 from .jobs import STEPS, jobs, set_job, set_step, step_index
 
 # Ensure ffmpeg is on PATH for audio processing and yt-dlp post-processing.
-os.environ["PATH"] += os.pathsep + FFMPEG_LOCATION
+if FFMPEG_LOCATION:
+    os.environ["PATH"] += os.pathsep + FFMPEG_LOCATION
 
 logger = logging.getLogger(__name__)
 

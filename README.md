@@ -80,15 +80,23 @@ http://localhost:8000
 
 ## Configuration
 
-The app’s default configuration lives in `backend/app/config.py`:
+The app's default configuration lives in `backend/app/config.py`. Every value can be overridden with an environment variable of the same name — no code edits required.
 
-- `TEMP_DIR`: Where downloaded audio and intermediate files are stored.
-- `WHISPER_MODEL_NAME`: Faster-Whisper model size (e.g., `tiny.en`, `base.en`, `small.en`, `medium.en`).
-- `WHISPER_DEVICE`: Inference device (default `cpu`).
-- `WHISPER_COMPUTE_TYPE`: Precision/quantization mode (default `int8` for low RAM on CPU).
-- `FFMPEG_LOCATION`: Optional path added to `PATH` if ffmpeg isn’t discoverable.
+| Variable | Default | Purpose |
+|---|---|---|
+| `TRANSCRIBINGAPP_TEMP_DIR` | system temp / `transcribingapp/` | Where downloaded audio and intermediate files are stored. |
+| `WHISPER_MODEL_NAME` | `base.en` | Faster-Whisper model size: `tiny.en`, `base.en`, `small.en`, `medium.en`, `large-v3`, etc. |
+| `WHISPER_DEVICE` | `cpu` | Inference device (`cpu`, `cuda`). |
+| `WHISPER_COMPUTE_TYPE` | `int8` | Precision/quantization (`int8` for low RAM CPU; `float16` for CUDA). |
+| `FFMPEG_LOCATION` | auto-detect from PATH | Directory containing the `ffmpeg` binary. Auto-detected via `which`, with fallbacks to `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`. Set explicitly only if ffmpeg is in an unusual location. |
 
-If you change any of these, restart the server.
+Example:
+
+```bash
+WHISPER_MODEL_NAME=small.en WHISPER_DEVICE=cuda uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+```
+
+Restart the server after changing any of these.
 
 ## Usage tips
 
