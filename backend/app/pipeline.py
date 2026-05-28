@@ -43,7 +43,7 @@ def run_command(cmd: list[str]) -> str:
     return result.stdout
 
 
-def cleanup_startup_temp():
+def cleanup_startup_temp() -> None:
     """Clear leftover temp files from previous runs."""
     if TEMP_DIR.exists():
         for item in TEMP_DIR.iterdir():
@@ -118,7 +118,7 @@ def transcribe(job_id: str, mp3: Path) -> str:
     return transcript
 
 
-def cleanup(job_id: str):
+def cleanup(job_id: str) -> None:
     """Remove temp files for a completed job."""
     steps_for_job = jobs.get(job_id, {}).get("steps", STEPS)
     final_idx = max(len(steps_for_job) - 1, 0)
@@ -130,7 +130,7 @@ def cleanup(job_id: str):
             logger.debug("Unable to delete temp file", extra={"path": str(path)})
 
 
-def process_job(job_id: str, url: str):
+def process_job(job_id: str, url: str) -> None:
     """Orchestrate the download/transcribe/cleanup flow for one job."""
     try:
         mp3 = download_audio(job_id, url)
@@ -140,7 +140,7 @@ def process_job(job_id: str, url: str):
         set_job(job_id, state="error", stage_text="Failed", error=str(exc), progress=100)
 
 
-def _finalize_job(job_id: str, text: str):
+def _finalize_job(job_id: str, text: str) -> None:
     """Mark a job as complete and store the transcript."""
     cleanup(job_id)
 

@@ -1,0 +1,85 @@
+name: Bug report
+description: Report a defect in TranscribingApp.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a report. Please fill in the fields below so the issue can be reproduced quickly.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the problem.
+      placeholder: When I submit a YouTube URL the job stalls at "Downloading audio…"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps so the issue can be reproduced.
+      placeholder: |
+        1. Start the server with `uvicorn backend.app.main:app`
+        2. Submit URL `https://...`
+        3. Observe job state via `GET /api/jobs/{id}`
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen instead.
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: macOS 15.4 / Ubuntu 24.04 / Windows 11
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: Output of `python --version`.
+      placeholder: Python 3.12.4
+    validations:
+      required: true
+
+  - type: input
+    id: ffmpeg
+    attributes:
+      label: FFmpeg version
+      description: Output of `ffmpeg -version` (first line).
+      placeholder: ffmpeg version 7.0.2
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Commit or version
+      description: Output of `git rev-parse --short HEAD` if you cloned the repo.
+      placeholder: b66c636
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant environment variables
+      description: Any non-default `WHISPER_*`, `FFMPEG_LOCATION`, or `TRANSCRIBINGAPP_*` values.
+      render: shell
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant server logs or browser console output.
+      render: shell

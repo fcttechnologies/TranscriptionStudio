@@ -1,8 +1,19 @@
-yt-dlp
-faster-whisper
-fastapi
-uvicorn[standard]
-python-multipart
-pydantic
-jinja2
+# TranscribingApp backend dependencies.
+# Pinned to current-major bands so installs stay reproducible while still
+# picking up security and bug-fix releases.
 
+# Media acquisition (yt-dlp ships date-based versions; pin a known-good floor).
+yt-dlp>=2026.3.17
+
+# Faster-Whisper (CTranslate2 Whisper runtime).
+faster-whisper>=1.0,<2.0
+
+# Web framework + ASGI server.
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+
+# Required by FastAPI for multipart form parsing (file uploads).
+python-multipart>=0.0.20
+
+# Pydantic 2.x for the request/response models.
+pydantic>=2.0,<3.0

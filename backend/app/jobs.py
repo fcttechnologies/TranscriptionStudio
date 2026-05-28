@@ -30,14 +30,14 @@ def create_job_record(job_id: str) -> dict:
     }
 
 
-def set_job(job_id: str, **updates):
+def set_job(job_id: str, **updates) -> None:
     """Update a job record in place, if it exists."""
     if job_id not in jobs:
         return
     jobs[job_id].update(updates)
 
 
-def set_step(job_id: str, idx: int, text: str, progress: int):
+def set_step(job_id: str, idx: int, text: str, progress: int) -> None:
     """Move a job to a new stage and update the progress bar."""
     if job_id not in jobs:
         return
@@ -54,7 +54,7 @@ def step_index(job_id: str, label: str) -> int:
         return max(len(steps) - 1, 0)
 
 
-def cleanup_old_jobs(cleanup_fn: Callable[[str], None], *, retention_seconds: int = 86400):
+def cleanup_old_jobs(cleanup_fn: Callable[[str], None], *, retention_seconds: int = 86400) -> None:
     """Remove completed/failed jobs after a retention window."""
     now = time.time()
     for jid in list(jobs.keys()):

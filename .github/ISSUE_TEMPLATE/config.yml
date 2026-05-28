@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/fcttechnologies/TranscribingApp/security/advisories/new
+    about: Report a vulnerability privately via a GitHub Security Advisory.
+  - name: Email the maintainer
+    url: mailto:fernando@fct-technologies.com
+    about: For anything that does not fit a bug or feature request.

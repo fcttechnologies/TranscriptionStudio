@@ -8,6 +8,15 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Test/coverage artifacts
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
 
 # Environments / secrets
 .env
@@ -25,3 +34,15 @@ __pycache__/
 
 # App runtime
 *.log
+
+# Local media drops (defensive — temp dir lives outside the repo by default)
+/audio/
+/media/
+/models/
+*.mp3
+*.wav
+*.m4a
+*.mp4
+*.ogg
+*.flac
+*.audio

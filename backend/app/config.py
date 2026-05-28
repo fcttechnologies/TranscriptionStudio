@@ -32,6 +32,9 @@ WHISPER_MODEL_NAME = os.environ.get("WHISPER_MODEL_NAME", "base.en")
 WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
 WHISPER_COMPUTE_TYPE = os.environ.get("WHISPER_COMPUTE_TYPE", "int8")
 
+# Standard Python logging level. Accepts DEBUG, INFO, WARNING, ERROR, CRITICAL.
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+
 # Location of the ffmpeg binary used by yt-dlp/audio processing.
 # Auto-detect via PATH; fall back to common system locations; allow override.
 def _detect_ffmpeg_location() -> str:
@@ -64,4 +67,5 @@ __all__ = [
     "WHISPER_DEVICE",
     "WHISPER_COMPUTE_TYPE",
     "FFMPEG_LOCATION",
+    "LOG_LEVEL",
 ]
