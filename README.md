@@ -116,8 +116,18 @@ The app's default configuration lives in `backend/app/config.py`. Every value ca
 | `WHISPER_MODEL_NAME` | `base.en` | Faster-Whisper model: `tiny.en`, `base.en`, `small.en`, `medium.en`, `large-v3`, etc. |
 | `WHISPER_DEVICE` | `cpu` | Inference device (`cpu`, `cuda`, `auto`). |
 | `WHISPER_COMPUTE_TYPE` | `int8` | Precision/quantization (`int8` for low-RAM CPU; `float16` for CUDA). |
+| `WHISPER_IDLE_TIMEOUT` | `600` | Seconds the model may sit idle before it's released from RAM. `0` keeps it warm once loaded. |
+| `WHISPER_PRELOAD` | `0` | `1` loads the model eagerly at startup (lowest first-request latency, always-resident RAM). |
 | `FFMPEG_LOCATION` | auto-detect | Directory containing `ffmpeg`. Auto-detected via `shutil.which`, with fallbacks to `/opt/homebrew/bin`, `/usr/local/bin`, `/usr/bin`. Set explicitly only if FFmpeg lives somewhere unusual. |
 | `LOG_LEVEL` | `INFO` | Standard Python logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`). |
+
+### Model lifecycle (resource modes)
+
+The Whisper model dominates the app's memory footprint, so its lifecycle is configurable to fit the deployment — the lightweight server always answers immediately; only the model's RAM varies:
+
+- **On-demand (default):** the model loads on the first transcription and is released after `WHISPER_IDLE_TIMEOUT` seconds idle. Ideal for occasional use — the model occupies RAM only while actually transcribing. The only cost is a one-time load (~1–3 s for `base.en`) on the first request after an idle period.
+- **Warm** (`WHISPER_IDLE_TIMEOUT=0`): load on first use, then keep it resident — no reload between sessions.
+- **Eager** (`WHISPER_PRELOAD=1`): load at startup for the lowest possible first-request latency, at the cost of always-resident RAM.
 
 Example:
 
@@ -153,7 +163,7 @@ Restart the server after changing any of these.
                                   (cleaned per job)
 ```
 
-Jobs are tracked in an in-memory dict (`backend/app/jobs.py`) keyed by UUID. State resets on server restart. Completed/failed jobs are evicted after a 24-hour retention window. URL jobs run on FastAPI background tasks; file uploads transcribe inline and return the transcript in the response. The Whisper model is loaded once at import time and reused across jobs.
+Jobs are tracked in an in-memory dict (`backend/app/jobs.py`) keyed by UUID. State resets on server restart. Completed/failed jobs are evicted after a 24-hour retention window. URL jobs run on FastAPI background tasks; file uploads transcribe inline and return the transcript in the response. The Whisper model is lazy-loaded on first use, cached across jobs, and released after an idle window so it isn't held in RAM when transcription isn't running (see [Model lifecycle](#model-lifecycle-resource-modes) for the warm/eager modes).
 
 ## Usage tips
 

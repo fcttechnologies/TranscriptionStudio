@@ -1,9 +1,12 @@
 """Processing pipeline for downloading audio and running Whisper."""
 
+import gc
 import logging
 import os
 import shutil
 import subprocess
+import threading
+import time
 from pathlib import Path
 
 import yt_dlp
@@ -14,7 +17,9 @@ from .config import (
     TEMP_DIR,
     WHISPER_COMPUTE_TYPE,
     WHISPER_DEVICE,
+    WHISPER_IDLE_TIMEOUT,
     WHISPER_MODEL_NAME,
+    WHISPER_PRELOAD,
 )
 from .jobs import STEPS, jobs, set_job, set_step, step_index
 
@@ -24,12 +29,55 @@ if FFMPEG_LOCATION:
 
 logger = logging.getLogger(__name__)
 
-# Load the Faster-Whisper model once at import time to reuse it across jobs.
-WHISPER_MODEL = WhisperModel(
-    WHISPER_MODEL_NAME,
-    device=WHISPER_DEVICE,
-    compute_type=WHISPER_COMPUTE_TYPE,
-)
+# Faster-Whisper model lifecycle (see config.py for the three modes). By default
+# the model loads on first use and is released after WHISPER_IDLE_TIMEOUT of idle,
+# so the app holds it in RAM only while transcription is actually in use.
+_model_lock = threading.Lock()
+_model = None
+_model_last_used = 0.0
+
+
+def get_model() -> WhisperModel:
+    """Return the Whisper model, loading it on first use and caching it across
+    jobs. The idle reaper frees it after WHISPER_IDLE_TIMEOUT of no use (unless
+    that's 0, meaning keep it warm once loaded)."""
+    global _model, _model_last_used
+    with _model_lock:
+        if _model is None:
+            logger.info(
+                "Loading Whisper model %s (%s/%s)",
+                WHISPER_MODEL_NAME, WHISPER_DEVICE, WHISPER_COMPUTE_TYPE,
+            )
+            _model = WhisperModel(
+                WHISPER_MODEL_NAME,
+                device=WHISPER_DEVICE,
+                compute_type=WHISPER_COMPUTE_TYPE,
+            )
+        _model_last_used = time.monotonic()
+        return _model
+
+
+def _idle_reaper() -> None:
+    """Release the model once it's been idle past the timeout, so a rarely-used
+    service doesn't hold it resident. An in-flight transcription keeps its own
+    reference, so reaping mid-job is safe — the next job reloads."""
+    global _model
+    while True:
+        time.sleep(60)
+        with _model_lock:
+            if _model is not None and (time.monotonic() - _model_last_used) > WHISPER_IDLE_TIMEOUT:
+                logger.info("Releasing idle Whisper model after %.0fs idle", WHISPER_IDLE_TIMEOUT)
+                _model = None
+                gc.collect()
+
+
+# Idle release only runs when a positive timeout is set (0 = keep warm once loaded).
+if WHISPER_IDLE_TIMEOUT > 0:
+    threading.Thread(target=_idle_reaper, name="whisper-idle-reaper", daemon=True).start()
+
+# Eager preload mode: load at startup for the lowest first-request latency.
+if WHISPER_PRELOAD:
+    get_model()
 
 
 def run_command(cmd: list[str]) -> str:
@@ -106,7 +154,7 @@ def transcribe(job_id: str, mp3: Path) -> str:
     set_step(job_id, step_index(job_id, "Transcribing"), "Transcribing…", 80)
 
     try:
-        segments, _ = WHISPER_MODEL.transcribe(str(mp3))
+        segments, _ = get_model().transcribe(str(mp3))
         transcript = " ".join(
             segment.text.strip() for segment in segments if segment.text and segment.text.strip()
         ).strip()

@@ -32,6 +32,16 @@ WHISPER_MODEL_NAME = os.environ.get("WHISPER_MODEL_NAME", "base.en")
 WHISPER_DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
 WHISPER_COMPUTE_TYPE = os.environ.get("WHISPER_COMPUTE_TYPE", "int8")
 
+# Model lifecycle — three modes, so the resource profile fits the deployment:
+#   on-demand (default): load on first request, release after WHISPER_IDLE_TIMEOUT
+#       seconds idle. The lightweight server stays up; the model only occupies RAM
+#       while in use — ideal for occasional transcription.
+#   warm:  WHISPER_IDLE_TIMEOUT=0  -> load on first use, then keep it resident.
+#   eager: WHISPER_PRELOAD=1       -> load at startup for the lowest first-request
+#       latency, at the cost of always-resident RAM (the original behavior).
+WHISPER_IDLE_TIMEOUT = float(os.environ.get("WHISPER_IDLE_TIMEOUT", "600"))
+WHISPER_PRELOAD = os.environ.get("WHISPER_PRELOAD", "0").lower() in ("1", "true", "yes", "on")
+
 # Standard Python logging level. Accepts DEBUG, INFO, WARNING, ERROR, CRITICAL.
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
 
@@ -66,6 +76,8 @@ __all__ = [
     "WHISPER_MODEL_NAME",
     "WHISPER_DEVICE",
     "WHISPER_COMPUTE_TYPE",
+    "WHISPER_IDLE_TIMEOUT",
+    "WHISPER_PRELOAD",
     "FFMPEG_LOCATION",
     "LOG_LEVEL",
 ]
