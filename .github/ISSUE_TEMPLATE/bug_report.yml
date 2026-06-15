@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a defect in TranscribingApp.
+description: Report a defect in Transcription Studio.
 title: "[Bug] "
 labels: ["bug"]
 body:

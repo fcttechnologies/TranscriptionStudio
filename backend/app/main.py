@@ -48,7 +48,7 @@ class JobRequest(BaseModel):
 async def lifespan(app: FastAPI):
     """Run startup housekeeping to clear temp files."""
     cleanup_startup_temp()
-    logger.info("TranscribingApp ready", extra={"temp_dir": str(TEMP_DIR)})
+    logger.info("Transcription Studio ready", extra={"temp_dir": str(TEMP_DIR)})
     yield
 
 

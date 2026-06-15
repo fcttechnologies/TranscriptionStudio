@@ -1,4 +1,4 @@
-# TranscribingApp backend dependencies.
+# Transcription Studio backend dependencies.
 # Pinned to current-major bands so installs stay reproducible while still
 # picking up security and bug-fix releases.
 

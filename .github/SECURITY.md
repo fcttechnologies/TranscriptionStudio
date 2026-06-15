@@ -2,11 +2,11 @@
 
 ## Reporting a vulnerability
 
-TranscribingApp is a small, self-hosted local web service. If you discover a vulnerability — a path-traversal, an SSRF in the URL ingestion path, an unsafe deserialization, or anything that could compromise a machine running this server — please report it privately rather than opening a public issue.
+Transcription Studio is a small, self-hosted local web service. If you discover a vulnerability — a path-traversal, an SSRF in the URL ingestion path, an unsafe deserialization, or anything that could compromise a machine running this server — please report it privately rather than opening a public issue.
 
 **Preferred channel**
 
-[Open a private security advisory on GitHub.](https://github.com/fcttechnologies/TranscribingApp/security/advisories/new)
+[Open a private security advisory on GitHub.](https://github.com/fcttechnologies/TranscriptionStudio/security/advisories/new)
 
 **Alternative**
 

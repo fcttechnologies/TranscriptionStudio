@@ -1,15 +1,15 @@
-# TranscribingApp
+# Transcription Studio
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![CI](https://github.com/fcttechnologies/TranscribingApp/actions/workflows/ci.yml/badge.svg)](https://github.com/fcttechnologies/TranscribingApp/actions/workflows/ci.yml)
+[![CI](https://github.com/fcttechnologies/TranscriptionStudio/actions/workflows/ci.yml/badge.svg)](https://github.com/fcttechnologies/TranscriptionStudio/actions/workflows/ci.yml)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-261230.svg)](https://github.com/astral-sh/ruff)
 
 A self-hosted web app that downloads audio from a public TikTok or YouTube URL — or from an uploaded media file — and transcribes it locally with [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper) (the CTranslate2 Whisper runtime). FastAPI backend, single-page static frontend, runs end-to-end on a single machine. No external API keys, no cloud calls, no audio leaves your device.
 
 ## Why this exists
 
-Most one-link transcription tools either upload your audio to someone else's server, paywall the model, or both. TranscribingApp is the local-first alternative: paste a link, run Whisper on your own hardware, and get the transcript without anyone else seeing the audio. It is the engine behind FCT Technologies' internal media workflows and is published as a reusable reference for anyone who wants a small, readable, fully-local transcription service.
+Most one-link transcription tools either upload your audio to someone else's server, paywall the model, or both. Transcription Studio is the local-first alternative: paste a link, run Whisper on your own hardware, and get the transcript without anyone else seeing the audio. It is the engine behind FCT Technologies' internal media workflows and is published as a reusable reference for anyone who wants a small, readable, fully-local transcription service.
 
 ## Why Faster-Whisper
 
@@ -25,13 +25,13 @@ Faster-Whisper is a re-implementation of OpenAI's Whisper using [CTranslate2](ht
 
 | Tool | Local | Open source | One-link UI | Notes |
 |---|---|---|---|---|
-| TranscribingApp | yes | yes | yes | Local FastAPI server you self-host. Paste-a-link UI on top of Faster-Whisper. |
+| Transcription Studio | yes | yes | yes | Local FastAPI server you self-host. Paste-a-link UI on top of Faster-Whisper. |
 | `whisper.cpp` | yes | yes | no | C++ CLI; fastest CPU runtime but no built-in URL ingestion or UI. |
 | MacWhisper | yes | no | yes (desktop app) | Polished macOS app; paid for advanced features; no headless API. |
 | Apple Transcribe Audio | yes | no | yes (Notes/Voice Memos) | Built-in to iOS/macOS; no URL ingestion, no programmatic access. |
 | OpenAI Whisper API | no | partial | no | Cloud, per-minute pricing, audio uploaded to OpenAI. |
 
-TranscribingApp's niche: a small, scriptable, self-hosted web service that swallows URLs and media files. It is the only entry in the table that exposes a JSON API and runs Whisper locally without writing your own glue.
+Transcription Studio's niche: a small, scriptable, self-hosted web service that swallows URLs and media files. It is the only entry in the table that exposes a JSON API and runs Whisper locally without writing your own glue.
 
 ## Prerequisites
 
@@ -42,8 +42,8 @@ TranscribingApp's niche: a small, scriptable, self-hosted web service that swall
 ## Clone the repo
 
 ```bash
-git clone https://github.com/fcttechnologies/TranscribingApp
-cd TranscribingApp
+git clone https://github.com/fcttechnologies/TranscriptionStudio
+cd TranscriptionStudio
 ```
 
 ## Install system dependencies
@@ -208,7 +208,7 @@ The included tests cover the configuration loader and the in-memory job store. T
 ## Project structure
 
 ```
-TranscribingApp/
+TranscriptionStudio/
 ├── backend/
 │   ├── app/
 │   │   ├── __init__.py
