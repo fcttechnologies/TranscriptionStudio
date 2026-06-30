@@ -3,7 +3,14 @@
 # picking up security and bug-fix releases.
 
 # Media acquisition (yt-dlp ships date-based versions; pin a known-good floor).
-yt-dlp>=2026.3.17
+# yt-dlp drifts fast as sites change their extraction — keep it current (see the
+# Transcription Studio dependency check in the Jarvis workspace reference/upkeep.md).
+yt-dlp>=2026.6.9
+
+# Browser impersonation backend for yt-dlp. REQUIRED for TikTok (and other sites
+# behind anti-bot) — without it the extractor is served broken/video-only formats
+# and audio extraction fails. Do not drop.
+curl_cffi>=0.7
 
 # Faster-Whisper (CTranslate2 Whisper runtime).
 faster-whisper>=1.0,<2.0

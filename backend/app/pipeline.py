@@ -115,7 +115,10 @@ def download_audio(job_id: str, url: str) -> Path:
     audio_out_template = str(TEMP_DIR / f"{job_id}.%(ext)s")
 
     ydl_opts = {
-        "format": "bestaudio/best",
+        # Prefer a real audio-only stream; else an H.264 stream — TikTok's bytevc1/H.265
+        # "best" formats advertise AAC but download video-only, breaking audio extraction;
+        # else any best. See reference/upkeep.md — Transcription Studio dependency check.
+        "format": "bestaudio/best[vcodec^=h264]/best",
         "outtmpl": audio_out_template,
         "postprocessors": [
             {
